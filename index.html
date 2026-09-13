@@ -46,17 +46,7 @@
     background: #6ee7b7; box-shadow: 0 0 8px #6ee7b7;
     animation: pulseDot 1.4s ease-in-out infinite;
   }
-  #rec { background: #7f1d1d; border: 1px solid #991b1b; min-width: 160px; }
-  #rec:hover:not(:disabled) { background: #991b1b; }
-  #rec.on { background: #dc2626; border-color: #ef4444; box-shadow: 0 0 14px rgba(220,38,38,0.55); }
-  #rec.on:hover:not(:disabled) { background: #b91c1c; }
-  #rec.on::after {
-    content: ''; position: absolute; top: 8px; right: 10px;
-    width: 9px; height: 9px; border-radius: 50%;
-    background: #fca5a5; box-shadow: 0 0 8px #fca5a5;
-    animation: recPulse 1s ease-in-out infinite;
-  }
-  @keyframes recPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.3;transform:scale(.7);} }
+
   @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.5;transform:scale(.75);} }
 
   #pb { background: #1e3a8a; border: 1px solid #2563eb; color: #dbeafe; min-width: 150px; }
@@ -104,7 +94,7 @@
   <button id="pause" disabled>⏸ Pausa</button>
   <button id="auto">🤖 Auto: OFF</button>
   <button id="pb">🎼 Playback: ON</button>
-  <button id="rec">⏺ Grabar</button>
+  
 
   <label class="ctrl">
     Modo
@@ -165,9 +155,7 @@
   const MAX_CATCHUP_EVENTS = 200;
   const MIN_LOOKAHEAD_MS = 60;
 
-  const RECORD_FPS = 15;
-  const RECORD_INTERVAL = 1000 / RECORD_FPS;
-  const REC_VERSION = 1;
+
 
   const MELODY_MIDI_FLOOR = 60;
   const MELODY_MIDI_CEIL  = 86;
@@ -1083,7 +1071,7 @@
   const pauseBtn = document.getElementById('pause');
   const autoBtn = document.getElementById('auto');
   const pbBtn = document.getElementById('pb');
-  const recBtn = document.getElementById('rec');
+  
   const modeSelect = document.getElementById('mode');
   const bpmInput = document.getElementById('bpm');
   const bpmVal = document.getElementById('bpmVal');
@@ -1120,11 +1108,7 @@
   let ambientNextHitTime = FIRST_HIT_MS;
   let lastBassFreq = null;
 
-  let recording = false;
-  let recordStartRealTime = 0;
-  let recordLastCaptureTime = 0;
-  let recordFrames = [];
-  let recordMeta = null;
+ 
 
   // =========================================================
   //   UTILIDADES
@@ -1215,101 +1199,16 @@
     progSelect.disabled = (gameMode === 'song');
   }
 
-  function updateRecButton() {
-    if (recording) {
-      recBtn.textContent = `⏹ Detener (${recordFrames.length})`;
-      recBtn.classList.add('on');
-    } else {
-      recBtn.textContent = '⏺ Grabar';
-      recBtn.classList.remove('on');
-    }
-  }
+
 
   // =========================================================
   //   GRABACIÓN
   // =========================================================
-  function startRecording() {
-    recording = true;
-    recordStartRealTime = performance.now();
-    recordLastCaptureTime = 0;
-    recordFrames = [];
-    recordMeta = {
-      version: REC_VERSION, tipo: 'ritmo-game-recording',
-      fecha: new Date().toISOString(), fps: RECORD_FPS,
-      intervalo_ms: Math.round(RECORD_INTERVAL * 1000) / 1000,
-      modo: gameMode, progresion: progressionName,
-      bpm_inicial: bpm, tolerancia_inicial: tolerance,
-      playback: playbackEnabled,
-      canvas: { w: Math.round(W), h: Math.round(H), fixedX: Math.round(fixedX) },
-      figuras: FIGURES.map(f => ({ nombre: f.name, beats: f.beats, color: f.color })),
-      cancion: gameMode === 'song' && currentSong ? {
-        forma: currentSong.form, forma_completa: currentSong.formFull,
-        compases: currentSong.bars.length,
-        estructura: currentSong.bars.map(b => ({
-          acorde: b.chord,
-          notas: b.notes.map(n => ({ beat: n.beat, dur: n.dur, midi: n.midi })),
-        })),
-      } : null,
-    };
-    captureFrame(currentGameTime());
-    updateRecButton();
-  }
 
-  function stopRecording() {
-    if (!recording) return;
-    recording = false;
-    updateRecButton();
-    if (recordFrames.length === 0) { alert('No se grabó ningún frame.'); return; }
-    const duracion_ms = recordFrames[recordFrames.length - 1].t;
-    const output = {
-      ...recordMeta, duracion_ms,
-      total_frames: recordFrames.length,
-      fps_real: Math.round((recordFrames.length / (duracion_ms / 1000)) * 100) / 100,
-      frames: recordFrames,
-    };
-    const json = JSON.stringify(output);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-    const filename = `ritmo-${gameMode}-${ts}.json`;
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    recordFrames = [];
-  }
 
-  function captureFrame(now) {
-    if (!recording) return;
-    const t = performance.now() - recordStartRealTime;
-    const frameNotes = [];
-    for (const n of notes) {
-      const isHit = n.state === 'hit';
-      const x = isHit ? n.freezeX : noteX(n, now);
-      if (x < -50 || x > W + 50) continue;
-      frameNotes.push({
-        x: Math.round(x * 10) / 10, w: Math.round(n.width * 10) / 10,
-        color: n.color, state: n.state, beats: n.beats,
-      });
-    }
-    const frame = {
-      t: Math.round(t), gt: Math.round(now), estado: gameState,
-      acorde: currentChordName, bpm, notas: frameNotes,
-      stats: { perfect: stats.perfect, bien: stats.good, fallo: stats.miss },
-    };
-    if (lastMelodyFreq) frame.melodia_hz = Math.round(lastMelodyFreq * 100) / 100;
-    if (lastBassFreq) frame.bajo_hz = Math.round(lastBassFreq * 100) / 100;
-    if (flash) {
-      const k = (now - flash.t) / 280;
-      if (k >= 0 && k < 1) frame.flash = { calidad: flash.quality, progreso: Math.round(k * 1000) / 1000 };
-    }
-    frame.auto = autoplay;
-    frame.playback = playbackEnabled;
-    frame.leyenda_visible = showLegend;
-    recordFrames.push(frame);
-  }
+  
+
+
 
   // =========================================================
   //   RESIZE
@@ -1964,25 +1863,7 @@
     ctx.restore();
   }
 
-  function drawRecBadge(now) {
-    if (!recording) return;
-    ctx.save();
-    const pulse = 0.6 + 0.4 * Math.abs(Math.sin(now / 350));
-    ctx.globalAlpha = 0.9;
-    ctx.fillStyle = 'rgba(220,38,38,0.20)';
-    roundRect(ctx, 16, 52, 118, 28, 8); ctx.fill();
-    ctx.strokeStyle = 'rgba(239,68,68,0.7)'; ctx.lineWidth = 1;
-    roundRect(ctx, 16, 52, 118, 28, 8); ctx.stroke();
-    ctx.globalAlpha = pulse;
-    ctx.fillStyle = '#ef4444';
-    ctx.beginPath(); ctx.arc(30, 66, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 0.9;
-    ctx.fillStyle = '#fecaca';
-    ctx.font = '700 11px system-ui, sans-serif';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(`REC  ${recordFrames.length}f`, 44, 67);
-    ctx.restore();
-  }
+ 
 
   function drawModeBadge() {
     if (gameState === 'stopped') return;
@@ -2102,7 +1983,7 @@
     drawAutoBadge();
     drawPlaybackBadge();
     drawModeBadge();
-    drawRecBadge(now);
+    
 
     if (gameState === 'playing') {
       const beatMs = 60000 / bpm;
@@ -2126,13 +2007,9 @@
   function frame() {
     requestAnimationFrame(frame);
     const now = currentGameTime();
-    const nowPerf = performance.now();
+    
 
-    if (recording && nowPerf - recordLastCaptureTime >= RECORD_INTERVAL) {
-      recordLastCaptureTime = nowPerf;
-      captureFrame(now);
-      updateRecButton();
-    }
+   
 
     if (gameState === 'stopped') { drawIdle(); return; }
     if (gameState === 'playing') update(now);
@@ -2162,9 +2039,7 @@
     updateButtons();
   });
 
-  recBtn.addEventListener('click', () => {
-    if (recording) stopRecording(); else startRecording();
-  });
+
 
   modeSelect.addEventListener('change', () => {
     gameMode = modeSelect.value;
@@ -2219,10 +2094,7 @@
       updateButtons();
       updateFormDisplay();
     }
-    if (e.code === 'KeyR') {
-      e.preventDefault();
-      if (recording) stopRecording(); else startRecording();
-    }
+   
   });
 
   bpmInput.addEventListener('input', () => {
@@ -2256,7 +2128,7 @@
   modeSelect.value = gameMode;
   updateStats();
   updateButtons();
-  updateRecButton();
+
   updateFormDisplay();
   requestAnimationFrame(frame);
 
