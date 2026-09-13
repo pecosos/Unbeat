@@ -240,7 +240,7 @@
   [0.5, 0.5, 1.5, 1.5],
   [1.5, 1, 0.5, 1],
 
-  // ===== LARGAS / ARRASTRES (sin [3,1] ni [1,3]) =====
+  // ===== LARGAS / ARRASTRES =====
   [1.5, 2.5],
   [2.5, 1.5],
   [2, 1.5, 0.5],
@@ -291,7 +291,7 @@
   [0.5, 1.75, 1.75],
   [1.75, 0.5, 1.75],
 
-  // ★ CAMBIO #1: RITMOS CON SILENCIOS (valores negativos = pausa)
+  // ===== SILENCIOS (valores negativos = pausa) =====
   [-1, 1, 1, 1],
   [-0.5, 0.5, 1, 2],
   [0.5, -0.5, 1, 2],
@@ -304,6 +304,98 @@
   [2, -0.5, 1, 0.5],
   [-0.5, 0.5, 0.5, 1, 2],
   [0.5, 0.5, -1, 2],
+
+  // ★ =====================================================
+  // ★ BANCO EXTENDIDO
+  // ★ =====================================================
+
+  // ===== FAMOSOS / CINEMATOGRÁFICOS =====
+  [0.5, 0.5, 0.5, 2.5],          // Beethoven 5 (da-da-da-DUM)
+  [0.5, 0.5, 0.5, -0.5, 2],      // Beethoven 5 con respiración
+  [0.5, 0.5, 3],                  // Jaws (tum-tum... tum)
+  [0.5, 0.5, 2, 0.5, 0.5],        // Star Wars
+  [0.5, 0.5, 1, 1, 1],            // Misión Imposible
+  [0.25, 0.25, 0.25, 0.25, 3],    // Persecución tensa
+  [1.5, 0.5, 1, 1],               // Tambor solemne
+  [0.25, 0.25, 0.25, 0.25, 1, 2], // Fanfarria breve
+
+  // ===== HEMIOLAS (3 contra 2) =====
+  [1.5, 1.5, 1],                  // 3+3+2
+  [1.5, 1, 1.5],                  // 3+2+3
+  [1.5, 1.5, 0.5, 0.5],           // 3+3+1+1
+  [1.5, 0.5, 1.5, 0.5],           // 3+1+3+1
+  [1.5, 0.5, 1, 1],               // 3+1+2+2
+
+  // ===== SILENCIOS DRAMÁTICOS =====
+  [-0.25, 0.25, 1, 1, 1.5],       // suspiro inicial
+  [-0.5, 1, 0.5, 1, 1],           // arranque roto
+  [-1.5, 1.5, 1],                 // silencio largo + frase
+  [-2, 2],                         // mitad calla, mitad suena
+  [0.5, -1, 1.5, 1],              // arranque + silencio + remate
+  [2, -2],                         // blanca, silencio
+  [0.5, -1, 0.5, 1, 1],           // corchea, silencio, frase
+  [-0.5, 0.5, 1.5, 0.5, 1],       // arranque suave + ritmo
+  [-1, 0.5, 1.5, 1],              // silencio + tres notas
+  [-0.5, 0.5, 0.5, 0.5, 2],       // arranque + frase larga
+
+  // ===== SÍNCOPAS AVANZADAS =====
+  [1.75, 0.25, 1, 1],             // negra+puntillo → síncopa
+  [1, 1.75, 0.25, 1],             // negra, negra+puntillo
+  [1.25, 1.25, 0.75, 0.75],
+  [0.75, 1.25, 1.25, 0.75],
+  [1.25, 0.75, 1.25, 0.75],
+  [0.75, 1.25, 0.75, 1.25],
+  [2.25, 0.75, 1],                // blanca+corchea, negra, negra
+  [1, 2.25, 0.75],
+  [0.75, 2.25, 1],
+  [1.75, 1, 1.25],
+  [1, 1, 1.75, 0.25],
+
+  // ===== LATIN / AFRO =====
+  [1, 0.5, 1.5, 1],               // clave son 3-2
+  [1.5, 0.5, 1, 1],               // bossa nova
+  [1, 0.5, 0.5, 1, 1],            // cumbia básica
+  [0.5, 0.5, 1, 0.5, 0.5, 1],     // tango marcato
+  [0.5, 0.25, 0.25, 0.5, 0.25, 0.25, 2], // samba
+  [0.75, 0.25, 0.5, 0.5, 1, 1],   // rumba
+  [1.5, 0.5, 0.5, 0.5, 1],        // bolero
+
+  // ===== GALOPE AVANZADO =====
+  [0.75, 0.25, 0.75, 0.25, 1, 1],
+  [0.75, 0.25, 1.5, 0.5, 1],
+  [1.5, 0.75, 0.25, 1.5],
+  [0.5, 0.75, 0.25, 0.5, 2],
+  [2, 0.75, 0.25, 1],
+  [0.75, 0.25, 2, 1],
+  [1, 0.75, 0.25, 0.75, 0.25, 1],
+  [0.75, 0.25, 1, 0.75, 0.25, 1],
+
+  // ===== TRESILLOS AVANZADOS =====
+  [1/3, 1/3, 1/3, 1/3, 1/3, 1/3, 1, 1],
+  [1, 1/3, 1/3, 1/3, 1/3, 1/3, 1/3, 1],
+  [1/3, 1/3, 1/3, 1.5, 0.5, 1],
+  [1/3, 1/3, 1/3, 0.5, 1.5, 1],
+  [0.5, 1/3, 1/3, 1/3, 1.5, 1],
+  [1/3, 1/3, 1/3, 1/3, 1/3, 1/3, 0.5, 1.5],
+  [1/3, 1/3, 1/3, 2.5, 0.5],
+  [1.5, 1/3, 1/3, 1/3, 0.5, 1],
+  [1/3, 1/3, 1/3, 1.5, 1.5],
+
+  // ===== SEMICORCHEAS EXPRESIVAS =====
+  [0.25, 0.25, 1.5, 2],
+  [1, 1, 0.25, 0.25, 0.25, 0.25, 1],
+  [0.25, 0.25, 0.25, 0.25, 1.5, 1.5],
+  [1.5, 0.25, 0.25, 0.25, 0.25, 1.5],
+  [0.25, 0.25, 1, 0.25, 0.25, 2],
+  [0.25, 0.25, 1, 2.5],
+  [2.5, 0.25, 0.25, 1],
+  [0.25, 0.25, 0.5, 0.5, 0.25, 0.25, 2],
+
+  // ===== HABLADOS =====
+  [0.25, 0.25, 0.5, 3],           // "Es-pe-ra ya"
+  [1, 0.25, 0.25, 1.5, 1],        // "Có-mo te va"
+  [0.5, 0.25, 0.25, 1, 2],        // "Ven a-cá ya"
+  [0.25, 0.25, 1, 0.5, 2],        // "No, no, va-mos"
 ];
 
   // ★ Sanity check de desarrollo (comentado, no afecta runtime)
@@ -526,45 +618,72 @@
       let beatPos = 0;
       const nNotes = rhythm.length;
 
-      for (let i = 0; i < nNotes; i++) {
+            for (let i = 0; i < nNotes; i++) {
         const dur = rhythm[i];
         const isLast = i === nNotes - 1;
 
-        // ★ CAMBIO #1: pausa (duración negativa) → avanza tiempo sin crear nota
         if (dur < 0) {
           beatPos += -dur;
           continue;
         }
 
         const isStrong = Math.abs(beatPos - Math.round(beatPos)) < 0.01;
-        const arcPos = nNotes === 1 ? 0.5 : i / (nNotes - 1);
-        const arc = Math.sin(arcPos * Math.PI) * 2.5;
-        const motifStep = motifAt(motif, arcPos);
-        const targetPerNote = Math.max(
-          MELODY_MIDI_FLOOR + 2,
-          Math.min(MELODY_MIDI_CEIL - 2, target + arc + motifStep)
-        );
 
-        // ★ CAMBIO #5: notas largas ancladas a fundamental o tercera
         let midi;
         if (bar === 7 && isLast) {
           midi = finalMidi;
-        }  else if (isStrong && dur >= 2) {
-  const root = chordNotes[0];
-  const thirdOffset = chord.endsWith('m') ? 3 : 4;   // ← chord, no chordName
-  const third = chordNotes.find(m => ((m - root + 12) % 12) === thirdOffset);
-  const anchored = [root, third].filter(m => m !== undefined);
-  midi = nearest(anchored.length ? anchored : chordNotes, targetPerNote);
-} else if (isStrong) {
-          midi = nearest(chordNotes, targetPerNote);
         } else {
-          midi = nearest(scaleNotes, targetPerNote);
-        }
+          // Pool de notas permitidas
+          let pool;
+          if (isStrong && dur >= 2) {
+            // Notas largas: solo fundamental o tercera (más estabilidad armónica)
+            const root = chordNotes[0];
+            const thirdOffset = chord.endsWith('m') ? 3 : 4;
+            const third = chordNotes.find(m => ((m - root + 12) % 12) === thirdOffset);
+            pool = [root, third].filter(m => m !== undefined);
+          } else if (isStrong) {
+            pool = chordNotes;
+          } else {
+            pool = scaleNotes;
+          }
 
-        if (Math.abs(midi - lastMidi) > 12) {
-          const dir = midi > lastMidi ? 1 : -1;
-          const pool = isStrong ? chordNotes : scaleNotes;
-          midi = nearest(pool, lastMidi + dir * 12);
+          // Contorno del compás: sube al medio, baja al final (más suave)
+          const arcPos = nNotes === 1 ? 0.5 : i / (nNotes - 1);
+          const arc = Math.sin(arcPos * Math.PI) * 1.5;
+          const motifStep = motifAt(motif, arcPos) * 0.5;
+          const targetPerNote = target + arc + motifStep;
+
+          // ★ Puntuación: preferir SIEMPRE notas cercanas a la anterior
+          let bestMidi = lastMidi;
+          let bestScore = -Infinity;
+          for (const m of pool) {
+            if (m < MELODY_MIDI_FLOOR || m > MELODY_MIDI_CEIL) continue;
+
+            const step = Math.abs(m - lastMidi);
+            const distToTarget = Math.abs(m - targetPerNote);
+
+            let score = 0;
+            // Movimiento conjunto = máxima prioridad
+            if (step === 0) score += 4;      // repetir nota
+            else if (step === 1) score += 8;  // semitono ← mejor
+            else if (step === 2) score += 7;  // tono ← muy bien
+            else if (step <= 4) score += 4;   // 3ª menor/mayor
+            else if (step <= 7) score += 1;   // 4ª/5ª justa
+            else if (step <= 12) score -= 3;  // 6ª/7ª/8ª
+            else score -= 8;                   // > octava: muy raro
+
+            // Atracción suave hacia el target del compás
+            score -= distToTarget * 0.35;
+
+            // Aleatoriedad ligera para no ser mecánico
+            score += Math.random() * 1.2;
+
+            if (score > bestScore) {
+              bestScore = score;
+              bestMidi = m;
+            }
+          }
+          midi = bestMidi;
         }
 
         midi = Math.max(MELODY_MIDI_FLOOR, Math.min(MELODY_MIDI_CEIL, midi));
@@ -910,7 +1029,6 @@
     trackSource(osc);
   }
 
-  // ★ CAMBIO #3: articulación (staccato / normal / legato)
   function playMelodyNote(freq, quality, durSec, atTime, isPlayback, articulation) {
     if (!audioCtx || !isFinite(freq)) return null;
     const t = (atTime !== undefined && isFinite(atTime)) ? atTime : audioCtx.currentTime;
@@ -924,7 +1042,13 @@
       ? Math.min(durSec, 3.0)
       : (quality === 'perfect' ? 1.4 : 0.9);
     const dur = art === 'staccato' ? rawDur * 0.5 : rawDur;
-    const attack = art === 'staccato' ? 0.002 : art === 'legato' ? 0.04 : 0.004;
+
+    // ★ NUEVO: envelope ADSR en lugar de AD
+    const attack  = art === 'staccato' ? 0.003 : art === 'legato' ? 0.03 : 0.010;
+    const decay   = 0.12;                          // tiempo hasta el nivel de sostenido
+    const sustainLevel = peak * 0.55;              // 55% del pico — el "cuerpo" de la nota
+    const release = Math.min(0.40, dur * 0.45);    // cola al final
+    const sustainUntil = Math.max(attack + decay, dur - release);
 
     const carrier = audioCtx.createOscillator();
     const modul   = audioCtx.createOscillator();
@@ -934,27 +1058,34 @@
 
     carrier.type = 'sine';
     carrier.frequency.value = freq;
+
+    // ★ FM más suave y más lenta (antes: 3.01 / 2.2 / 0.2s)
     modul.type = 'sine';
-    modul.frequency.value = freq * 3.01;
-    modGain.gain.setValueAtTime(freq * 2.2, t);
-    modGain.gain.exponentialRampToValueAtTime(freq * 0.02, t + 0.20);
+    modul.frequency.value = freq * 2.0;
+    modGain.gain.setValueAtTime(freq * 1.4, t);
+    modGain.gain.exponentialRampToValueAtTime(freq * 0.12, t + 0.7);
     modul.connect(modGain).connect(carrier.frequency);
 
+    // ★ Filtro más abierto y más lento (antes: 2500 / 0.6s)
     tone.type = 'lowpass';
-    tone.Q.value = 0.5;
-    const f0 = Math.min(9000, freq * 14);
-    const f1 = Math.min(2500, freq * 3);
+    tone.Q.value = 0.7;
+    const f0 = Math.min(9000, freq * 12);
+    const f1 = Math.min(5000, freq * 5);
     tone.frequency.setValueAtTime(f0, t);
-    tone.frequency.exponentialRampToValueAtTime(f1, t + 0.6);
+    tone.frequency.exponentialRampToValueAtTime(f1, t + 1.2);
 
+    // ★ Envelope ADSR
     out.gain.setValueAtTime(0, t);
     out.gain.linearRampToValueAtTime(peak, t + attack);
-    out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    out.gain.exponentialRampToValueAtTime(sustainLevel, t + attack + decay);
+    out.gain.setValueAtTime(sustainLevel, t + sustainUntil);
+    out.gain.exponentialRampToValueAtTime(0.0001, t + sustainUntil + release);
 
     carrier.connect(tone).connect(out).connect(melodyBus);
     carrier.start(t); modul.start(t);
-    carrier.stop(t + dur + 0.05);
-    modul.stop(t + dur + 0.05);
+    const stopAt = t + sustainUntil + release + 0.05;
+    carrier.stop(stopAt);
+    modul.stop(stopAt);
     trackSource(carrier);
     trackSource(modul);
 
