@@ -1,0 +1,2266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrenador de Ritmo · procedural</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #0b0d12; color: #e5e7eb;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+  }
+  body { display: flex; flex-direction: column; }
+  .controls {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 20px; background: #12151d;
+    border-bottom: 1px solid #1f2430;
+    flex-wrap: wrap; flex: 0 0 auto;
+  }
+  button {
+    border: none; color: #fff;
+    padding: 10px 22px; border-radius: 8px;
+    font-size: 15px; font-weight: 700; letter-spacing: .3px;
+    cursor: pointer; transition: background .15s, transform .08s, opacity .15s;
+    min-width: 110px; position: relative;
+  }
+  button:active:not(:disabled) { transform: scale(.97); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  #play { background: #2563eb; }
+  #play:hover:not(:disabled) { background: #1d4ed8; }
+  #play.stop { background: #dc2626; }
+  #play.stop:hover:not(:disabled) { background: #b91c1c; }
+  #pause { background: #6b7280; }
+  #pause:hover:not(:disabled) { background: #4b5563; }
+  #pause.resume { background: #f59e0b; }
+  #pause.resume:hover:not(:disabled) { background: #d97706; }
+  #auto { background: #1f2937; border: 1px solid #374151; }
+  #auto:hover:not(:disabled) { background: #374151; }
+  #auto.on { background: #059669; border-color: #10b981; box-shadow: 0 0 14px rgba(16,185,129,0.45); }
+  #auto.on:hover:not(:disabled) { background: #047857; }
+  #auto.on::after {
+    content: ''; position: absolute; top: 6px; right: 8px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #6ee7b7; box-shadow: 0 0 8px #6ee7b7;
+    animation: pulseDot 1.4s ease-in-out infinite;
+  }
+  #rec { background: #7f1d1d; border: 1px solid #991b1b; min-width: 160px; }
+  #rec:hover:not(:disabled) { background: #991b1b; }
+  #rec.on { background: #dc2626; border-color: #ef4444; box-shadow: 0 0 14px rgba(220,38,38,0.55); }
+  #rec.on:hover:not(:disabled) { background: #b91c1c; }
+  #rec.on::after {
+    content: ''; position: absolute; top: 8px; right: 10px;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #fca5a5; box-shadow: 0 0 8px #fca5a5;
+    animation: recPulse 1s ease-in-out infinite;
+  }
+  @keyframes recPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.3;transform:scale(.7);} }
+  @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.5;transform:scale(.75);} }
+
+  #pb { background: #1e3a8a; border: 1px solid #2563eb; color: #dbeafe; min-width: 150px; }
+  #pb:hover:not(:disabled) { background: #1d4ed8; }
+  #pb.on { background: #7c3aed; border-color: #a78bfa; box-shadow: 0 0 14px rgba(167,139,250,0.45); }
+  #pb.on:hover:not(:disabled) { background: #6d28d9; }
+
+  .ctrl { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #9ca3af; }
+  .ctrl .val { display: inline-block; min-width: 52px; font-variant-numeric: tabular-nums; color: #e5e7eb; font-weight: 600; }
+  select { background: #1a1f2b; color: #e5e7eb; border: 1px solid #2a3140; border-radius: 6px; padding: 6px 10px; font-size: 13px; font-family: inherit; cursor: pointer; outline: none; }
+  select:focus { border-color: #60a5fa; }
+  select:disabled { opacity: .4; cursor: not-allowed; }
+  #mode { background: #1e3a8a; border-color: #2563eb; font-weight: 600; color: #dbeafe; }
+  #mode:focus { border-color: #60a5fa; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 120px; height: 4px; border-radius: 2px; background: #2a3140; outline: none; cursor: pointer; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #60a5fa; border: 2px solid #0b0d12; box-shadow: 0 0 0 1px #60a5fa; }
+  input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #60a5fa; border: 2px solid #0b0d12; box-shadow: 0 0 0 1px #60a5fa; }
+  .stats { margin-left: auto; display: flex; gap: 18px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .stats b { font-size: 16px; font-weight: 700; }
+  .st-perfect b { color: #22d3ee; }
+  .st-good b   { color: #4ade80; }
+  .st-miss b   { color: #ef4444; }
+
+  .form-panel {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 12px; background: rgba(139, 92, 246, 0.10);
+    border: 1px solid rgba(167, 139, 250, 0.35);
+    border-radius: 8px; font-size: 13px; color: #c4b5fd;
+    font-variant-numeric: tabular-nums;
+  }
+  .form-panel .lbl { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: rgba(196, 181, 253, 0.7); }
+  .form-panel .form-str { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; font-size: 14px; color: #ddd6fe; letter-spacing: 1px; }
+  .form-panel .arrow { color: rgba(167, 139, 250, 0.5); }
+  .form-panel .form-full { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; font-size: 14px; letter-spacing: 1.5px; color: #a78bfa; }
+  .form-panel .form-full .bar-now { color: #f0abfc; text-shadow: 0 0 8px rgba(240, 171, 252, 0.8); background: rgba(240, 171, 252, 0.15); border-radius: 3px; padding: 0 2px; }
+  .form-panel .idle { color: rgba(156, 163, 175, 0.6); font-style: italic; }
+
+  canvas { flex: 1 1 auto; width: 100%; min-height: 0; display: block; cursor: pointer; touch-action: manipulation; }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <button id="play">▶ Play</button>
+  <button id="pause" disabled>⏸ Pausa</button>
+  <button id="auto">🤖 Auto: OFF</button>
+  <button id="pb">🎼 Playback: ON</button>
+  <button id="rec">⏺ Grabar</button>
+
+  <label class="ctrl">
+    Modo
+    <select id="mode">
+      <option value="song">🎵 Canción</option>
+      <option value="ambient">🌫️ Ambient</option>
+    </select>
+  </label>
+
+  <label class="ctrl">
+    BPM
+    <input type="range" id="bpm" min="40" max="220" step="1" value="90">
+    <span class="val" id="bpmVal">90</span>
+  </label>
+
+  <label class="ctrl">
+    Tolerancia
+    <input type="range" id="tol" min="20" max="400" step="5" value="150">
+    <span class="val" id="tolVal">150 ms</span>
+  </label>
+
+  <label class="ctrl">
+    Progresión
+    <select id="prog">
+      <option value="pop">Pop · I–V–vi–IV</option>
+      <option value="doowop">Doo-wop · I–vi–IV–V</option>
+      <option value="clasica">Clásica · I–IV–V–I</option>
+      <option value="canon">Canon · I–V–vi–iii–IV–I–IV–V</option>
+    </select>
+  </label>
+
+  <div class="form-panel" id="formPanel">
+    <span class="lbl">FORMA</span>
+    <span id="formContent" class="idle">— sin canción —</span>
+  </div>
+
+  <div class="stats">
+    <span class="st-perfect">Perfect <b id="cPerfect">0</b></span>
+    <span class="st-good">Bien <b id="cGood">0</b></span>
+    <span class="st-miss">Fallo <b id="cMiss">0</b></span>
+  </div>
+</div>
+
+<canvas id="cv"></canvas>
+
+<script>
+(() => {
+  'use strict';
+
+  // =========================================================
+  //   CONFIGURACIÓN
+  // =========================================================
+  const TRAVEL_MS = 2400;
+  const FIRST_HIT_MS = 900;
+  const HIT_FADE_MS = 320;
+
+  const SCHEDULE_HORIZON_MS = 200;
+  const MAX_CATCHUP_EVENTS = 200;
+  const MIN_LOOKAHEAD_MS = 60;
+
+  const RECORD_FPS = 15;
+  const RECORD_INTERVAL = 1000 / RECORD_FPS;
+  const REC_VERSION = 1;
+
+  const MELODY_MIDI_FLOOR = 60;
+  const MELODY_MIDI_CEIL  = 86;
+
+  const INTRO_BARS = 1;
+  const OUTRO_BARS = 1;
+
+  const FIGURES = [
+    { name: 'Cuadrada',              beats: 8,     weight: 0.3, color: '#c084fc' },
+    { name: 'Redonda con puntillo',  beats: 6,     weight: 0.5, color: '#a78bfa' },
+    { name: 'Redonda',               beats: 4,     weight: 1.0, color: '#8b5cf6' },
+    { name: 'Blanca con puntillo',   beats: 3,     weight: 0.6, color: '#60a5fa' },
+    { name: 'Blanca',                beats: 2,     weight: 2.0, color: '#3b82f6' },
+    { name: 'Negra con puntillo',    beats: 1.5,   weight: 0.8, color: '#34d399' },
+    { name: 'Negra',                 beats: 1,     weight: 5.0, color: '#10b981' },
+    { name: 'Corchea con puntillo',  beats: 0.75,  weight: 0.5, color: '#fbbf24' },
+    { name: 'Corchea',               beats: 0.5,   weight: 3.0, color: '#f59e0b' },
+    { name: 'Tresillo de corchea',   beats: 1/3,   weight: 1.0, color: '#fb923c' },
+    { name: 'Semicorchea',           beats: 0.25,  weight: 1.0, color: '#f87171' },
+    { name: 'Fusa',                  beats: 0.125, weight: 0.4, color: '#f43f5e' },
+  ];
+  const TOTAL_WEIGHT = FIGURES.reduce((s, f) => s + f.weight, 0);
+
+  function figureWidth(beats) { return Math.max(9, 10 + Math.sqrt(beats) * 6); }
+  function colorForDuration(beats) {
+    if (beats >= 4) return '#8b5cf6';
+    if (beats >= 2) return '#3b82f6';
+    if (beats >= 1) return '#10b981';
+    if (beats >= 0.5) return '#f59e0b';
+    if (beats >= 0.25) return '#f87171';
+    return '#f43f5e';
+  }
+  function pickFigure() {
+    let r = Math.random() * TOTAL_WEIGHT;
+    for (const f of FIGURES) { r -= f.weight; if (r <= 0) return f; }
+    return FIGURES[6];
+  }
+
+  // =========================================================
+  //   PROGRESIONES
+  // =========================================================
+  const PROGRESSIONS = {
+    pop:     ['C', 'G', 'Am', 'F'],
+    doowop:  ['C', 'Am', 'F', 'G'],
+    clasica: ['C', 'F', 'G', 'C'],
+    canon:   ['C', 'G', 'Am', 'Em', 'F', 'C', 'F', 'G'],
+  };
+
+  const PROGRESSION_BANK = [
+    ['C', 'G', 'Am', 'F', 'C', 'G', 'F', 'C'],
+    ['C', 'G', 'Am', 'F', 'C', 'Am', 'G', 'C'],
+    ['C', 'Am', 'F', 'G', 'C', 'Am', 'F', 'C'],
+    ['C', 'F', 'G', 'C', 'C', 'F', 'G', 'C'],
+    ['C', 'G', 'Am', 'Em', 'F', 'C', 'G', 'C'],
+    ['C', 'Am', 'Dm', 'G', 'C', 'Am', 'F', 'C'],
+    ['C', 'G', 'F', 'G', 'C', 'G', 'F', 'C'],
+    ['C', 'Em', 'F', 'G', 'C', 'Em', 'F', 'C'],
+    ['C', 'Em', 'Am', 'F', 'C', 'G', 'F', 'C'],
+    ['C', 'F', 'Am', 'G', 'C', 'F', 'G', 'C'],
+    ['C', 'Dm', 'G', 'Em', 'Am', 'F', 'G', 'C'],
+    ['C', 'G', 'Dm', 'Am', 'F', 'C', 'G', 'C'],
+  ];
+
+  // ★ CAMBIO #1: silencios con duraciones negativas + CAMBIO #5: quitados [3,1] y [1,3]
+  const RHYTHM_BANK = [
+  // ===== BASE =====
+  [1, 1, 1, 1], [1, 1, 2], [1, 0.5, 0.5, 2], [1, 0.5, 0.5, 1, 1],
+  [1, 1, 0.5, 0.5, 1], [0.5, 0.5, 1, 2], [0.5, 0.5, 0.5, 0.5, 2],
+  [2, 1, 1], [2, 2], [1.5, 0.5, 2], [0.5, 0.5, 2, 1],
+  [1, 1, 1, 0.5, 0.5], [0.5, 1, 0.5, 2], [1, 0.5, 1.5, 1],
+  [1, 1.5, 0.5, 1], [0.5, 1, 1, 1.5],
+
+  // ===== SÍNCOPAS Y CONTRATIEMPOS =====
+  [0.5, 1.5, 1, 1],
+  [1, 1.5, 1.5],
+  [0.5, 0.5, 1.5, 0.5, 1],
+  [1.5, 0.5, 0.5, 1.5],
+  [2, 0.5, 0.5, 1],
+  [2, 0.5, 0.5, 0.5, 0.5],
+  [1, 0.5, 0.5, 0.5, 0.5, 1],
+  [0.5, 1.5, 0.5, 1.5],
+  [0.5, 0.5, 1.5, 1.5],
+  [1.5, 1, 0.5, 1],
+
+  // ===== LARGAS / ARRASTRES (sin [3,1] ni [1,3]) =====
+  [1.5, 2.5],
+  [2.5, 1.5],
+  [2, 1.5, 0.5],
+  [0.5, 1.5, 2],
+
+  // ===== GALOPE / PUNTILLO =====
+  [0.75, 0.25, 1, 2],
+  [1, 0.75, 0.25, 2],
+  [0.75, 0.25, 0.75, 0.25, 2],
+  [0.75, 0.75, 0.5, 2],
+  [0.75, 0.25, 0.5, 0.5, 2],
+  [0.75, 0.75, 0.75, 0.75, 1],
+
+  // ===== TRESILLOS =====
+  [1/3, 1/3, 1/3, 1, 1, 1],
+  [1, 1/3, 1/3, 1/3, 1, 1],
+  [2, 1/3, 1/3, 1/3, 1],
+  [1, 1/3, 1/3, 1/3, 2],
+  [1.5, 1/3, 1/3, 1/3, 1.5],
+  [1/3, 1/3, 1/3, 3],
+  [1/3, 1/3, 1/3, 1/3, 1/3, 1/3, 2],
+  [1, 1.5, 1/3, 1/3, 1/3, 0.5],
+
+  // ===== SEMICORCHEAS =====
+  [0.25, 0.25, 0.5, 1, 2],
+  [0.25, 0.25, 0.25, 0.25, 1, 1, 1],
+  [0.5, 0.25, 0.25, 1, 2],
+  [1, 0.25, 0.25, 0.5, 2],
+  [1, 0.25, 0.25, 0.25, 0.25, 2],
+  [1.5, 0.25, 0.25, 2],
+  [0.25, 0.25, 0.5, 0.5, 0.5, 2],
+  [0.25, 0.25, 0.25, 0.25, 0.5, 0.5, 1, 1],
+  [0.25, 0.25, 0.5, 0.5, 2.5],
+
+  // ===== FLURRY =====
+  [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1],
+  [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+  [0.5, 1, 0.5, 0.5, 0.5, 1],
+  [0.5, 0.5, 1, 0.5, 0.5, 1],
+  [0.5, 0.5, 0.5, 1, 1.5],
+  [0.5, 0.5, 0.5, 0.5, 1, 1],
+
+  // ===== IRREGULARES =====
+  [1.25, 0.75, 2],
+  [0.75, 1.25, 2],
+  [1.25, 1.25, 1.5],
+  [2, 0.75, 1.25],
+  [0.5, 1.75, 1.75],
+  [1.75, 0.5, 1.75],
+
+  // ★ CAMBIO #1: RITMOS CON SILENCIOS (valores negativos = pausa)
+  [-1, 1, 1, 1],
+  [-0.5, 0.5, 1, 2],
+  [0.5, -0.5, 1, 2],
+  [1, -0.5, 0.5, 2],
+  [2, -1, 1],
+  [1, 1, -0.5, 0.5, 1],
+  [1.5, -0.5, 1, 1],
+  [1, -1, 0.5, 1.5],
+  [1, 1, -1, 1],
+  [2, -0.5, 1, 0.5],
+  [-0.5, 0.5, 0.5, 1, 2],
+  [0.5, 0.5, -1, 2],
+];
+
+  // ★ Sanity check de desarrollo (comentado, no afecta runtime)
+  // RHYTHM_BANK.forEach((r, i) => {
+  //   const s = r.reduce((a, b) => a + Math.abs(b), 0);
+  //   if (Math.abs(s - 4) > 1e-9) console.warn('Ritmo', i, 'suma', s, r);
+  // });
+
+  const MOTIFS = [
+    [0,  2,  4,  2], [0, -2,  1, -1], [0,  4,  2,  0],
+    [0,  2,  3,  2], [0, -3,  2, -1], [0,  3,  5,  3],
+    [0,  5,  3,  1], [0,  1,  3, -2], [0,  4,  5,  3],
+    [0, -4,  0,  2],
+  ];
+
+  const FORMS = [
+    'AABA', 'AABA', 'ABAB', 'ABAC',
+    'AABC', 'ABCA', 'ABCB', 'ABCD',
+  ];
+
+  // =========================================================
+  //   PATRONES DE BATERÍA
+  // =========================================================
+  const PATTERNS = {
+    a1: { kick: [0, 2], snare: [1, 3], ghost: [], hh: '8' },
+    a2: { kick: [0, 2], snare: [1, 3], ghost: [1.75], hh: '8' },
+    a3: { kick: [0, 2, 2.75], snare: [1, 3], ghost: [3.5], hh: '8' },
+
+    b1: { kick: [0, 1.75, 2.5], snare: [1, 3], ghost: [], hh: '8' },
+    b2: { kick: [0, 2.5], snare: [1, 3], ghost: [1.75, 3.75], hh: '8' },
+    b3: { kick: [0, 1.5], snare: [1, 3], ghost: [2.75], hh: '16' },
+
+    c1: { kick: [0], snare: [2], ghost: [], hh: '4' },
+    c2: { kick: [0, 2.5], snare: [2], ghost: [], hh: '8' },
+    c3: { kick: [0], snare: [2], ghost: [1.75], hh: '8' },
+
+    d1: { kick: [0, 1.5, 2, 3.5], snare: [1, 3], ghost: [], hh: '16' },
+    d2: { kick: [0, 2, 3.5], snare: [1, 3], ghost: [0.5, 1.75, 2.5], hh: '16' },
+    d3: { kick: [0, 1.5, 3], snare: [1, 2.75, 3], ghost: [0.75], hh: '16' },
+  };
+
+  const SECTION_PATTERNS = {
+    A: ['a1', 'a2', 'a1', 'a3'],
+    B: ['b1', 'b2', 'b3', 'b2'],
+    C: ['c1', 'c2', 'c3', 'c2'],
+    D: ['d1', 'd2', 'd3', 'd2'],
+  };
+
+  // ★ CAMBIO #2: batería neutra para compases ternarios
+  const TERNARY_BAR = { kick: [0, 2], snare: [1, 3], ghost: [], hh: '4' };
+
+  // Fills en compases 3 y 7
+  const FILLS = [
+    { kick: [0], snare: [1, 2, 3, 3.25, 3.5, 3.75], ghost: [], hh: '4' },
+    { kick: [0], snare: [1, 2], tom: [2.5, 2.75, 3, 3.25, 3.5, 3.75], hh: '4' },
+    { kick: [0, 3.5], snare: [1, 2, 2.5, 3, 3.5, 3.75], ghost: [], hh: '4' },
+  ];
+
+  // ★ CAMBIO #4: dinámicas por sección
+  const SECTION_DYNAMICS = {
+    A: 1.00,
+    B: 1.08,
+    C: 0.78,
+    D: 1.15,
+  };
+
+  const CHORD_ROOT_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+
+  function randomChoice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function chordTonesMidi(chordName, minMidi, maxMidi) {
+    const pcs = CHORD_PCS[chordName];
+    if (!pcs) return [minMidi];
+    const arr = [];
+    for (let m = minMidi; m <= maxMidi; m++) {
+      if (pcs.includes(((m % 12) + 12) % 12)) arr.push(m);
+    }
+    return arr;
+  }
+
+  function scaleMidiC(minMidi, maxMidi) {
+    const pcs = [0, 2, 4, 5, 7, 9, 11];
+    const arr = [];
+    for (let m = minMidi; m <= maxMidi; m++) {
+      if (pcs.includes(((m % 12) + 12) % 12)) arr.push(m);
+    }
+    return arr;
+  }
+
+  function generateBassLine(chordName, variant) {
+    const isMinor = chordName.endsWith('m');
+    const rootLetter = chordName[0];
+    const rootPc = CHORD_ROOT_PC[rootLetter];
+    if (rootPc === undefined) return [36, 43, 40, 43];
+    let r = 36 + rootPc;
+    if (r > 47) r -= 12;
+    const t = isMinor ? 3 : 4;
+    const f = 7;
+    switch (variant) {
+      case 0:  return [r, r + f, r + t, r + f];
+      case 1:  return [r, r + t, r + f, r + t];
+      case 2:  return [r, r + f, r, r + t];
+      case 3:  return [r, r + 12, r + f, r + t];
+      case 4:  return [r, r + f, r + 12, r + f];
+      case 5:  return [r, r + 12, r + t, r + f];
+      default: return [r, r + f, r + t, r + f];
+    }
+  }
+
+  function motifAt(motif, t) {
+    if (motif.length === 1) return motif[0];
+    const pos = t * (motif.length - 1);
+    const i0 = Math.floor(pos);
+    const i1 = Math.min(motif.length - 1, i0 + 1);
+    const frac = pos - i0;
+    return motif[i0] * (1 - frac) + motif[i1] * frac;
+  }
+
+  // ★ CAMBIO #1: mutateRhythm no muta ritmos con silencio
+  function mutateRhythm(rhythm, intensity) {
+    const r = rhythm.slice();
+    if (r.some(d => d < 0)) return r;
+    const roll = Math.random();
+    if (roll < intensity * 0.45 && r.length < 6) {
+      const cands = [];
+      for (let i = 0; i < r.length; i++) if (r[i] >= 1) cands.push(i);
+      if (cands.length) {
+        const i = cands[Math.floor(Math.random() * cands.length)];
+        const half = r[i] / 2;
+        if (half >= 0.5) r.splice(i, 1, half, half);
+      }
+    } else if (roll < intensity * 0.75 && r.length > 2) {
+      const i = Math.floor(Math.random() * (r.length - 1));
+      r.splice(i, 2, r[i] + r[i + 1]);
+    } else if (roll < intensity * 1.05 && r.length > 2) {
+      const i = Math.floor(Math.random() * (r.length - 1));
+      const tmp = r[i]; r[i] = r[i + 1]; r[i + 1] = tmp;
+    } else if (roll < intensity * 1.35 && r.length > 2) {
+      const last = r.length - 1;
+      if (r[last] < 2 && r[last - 1] >= 1) {
+        r[last] += 0.5;
+        r[last - 1] -= 0.5;
+      }
+    }
+    return r;
+  }
+
+  // ★ CAMBIO #2: helpers de detección ternaria
+  function isTernaryBeat(d) {
+    if (d <= 0) return false;
+    const t = d * 3;
+    if (Math.abs(t - Math.round(t)) > 1e-6) return false;
+    const b = d * 4;
+    return Math.abs(b - Math.round(b)) > 1e-6;
+  }
+  function rhythmHasTernary(rhythm) {
+    return rhythm.some(isTernaryBeat);
+  }
+
+  // =========================================================
+  //   GENERACIÓN MELÓDICA
+  // =========================================================
+  function generateSong() {
+    const chords = randomChoice(PROGRESSION_BANK);
+    const formStr = randomChoice(FORMS);
+    const formBars = (formStr + formStr).split('');
+    const formFull = formBars.join('');
+
+    const baseMotif = randomChoice(MOTIFS);
+    const sections = {
+      A: { rhythm: randomChoice(RHYTHM_BANK), motif: baseMotif },
+      B: { rhythm: randomChoice(RHYTHM_BANK), motif: baseMotif.map(x => -x) },
+      C: { rhythm: randomChoice(RHYTHM_BANK), motif: randomChoice(MOTIFS) },
+      D: { rhythm: randomChoice(RHYTHM_BANK), motif: baseMotif.map(x => Math.round(x * 1.5)) },
+    };
+
+    const seen = {};
+    const mutatedCache = {};
+    const rhythmPerBar = [];
+    const motifPerBar  = [];
+
+    for (let bar = 0; bar < 8; bar++) {
+      const label = formBars[bar];
+      const sec = sections[label] || sections.A;
+      if (!seen[label]) {
+        seen[label] = true;
+        rhythmPerBar.push(sec.rhythm.slice());
+      } else {
+        if (!mutatedCache[label]) mutatedCache[label] = mutateRhythm(sec.rhythm, 0.5);
+        rhythmPerBar.push(mutatedCache[label].slice());
+      }
+      motifPerBar.push(sec.motif);
+    }
+
+    const baseMidi = 67;
+    const peakMidi = 79;
+    const finalMidi = 76;
+
+    const bars = [];
+    let lastMidi = 67;
+
+    for (let bar = 0; bar < 8; bar++) {
+      const chord  = chords[bar];
+      const rhythm = rhythmPerBar[bar];
+      const motif  = motifPerBar[bar];
+      const chordNotes = chordTonesMidi(chord, 60, 88);
+      const scaleNotes = scaleMidiC(60, 88);
+
+      let target;
+      if (bar <= 4) {
+        const t = bar / 4;
+        target = baseMidi + (peakMidi - baseMidi) * t;
+      } else {
+        const t = (bar - 4) / 4;
+        target = peakMidi + (baseMidi - peakMidi) * t;
+      }
+      if (bar === 7) target = finalMidi;
+
+      const barNotes = [];
+      let beatPos = 0;
+      const nNotes = rhythm.length;
+
+      for (let i = 0; i < nNotes; i++) {
+        const dur = rhythm[i];
+        const isLast = i === nNotes - 1;
+
+        // ★ CAMBIO #1: pausa (duración negativa) → avanza tiempo sin crear nota
+        if (dur < 0) {
+          beatPos += -dur;
+          continue;
+        }
+
+        const isStrong = Math.abs(beatPos - Math.round(beatPos)) < 0.01;
+        const arcPos = nNotes === 1 ? 0.5 : i / (nNotes - 1);
+        const arc = Math.sin(arcPos * Math.PI) * 2.5;
+        const motifStep = motifAt(motif, arcPos);
+        const targetPerNote = Math.max(
+          MELODY_MIDI_FLOOR + 2,
+          Math.min(MELODY_MIDI_CEIL - 2, target + arc + motifStep)
+        );
+
+        // ★ CAMBIO #5: notas largas ancladas a fundamental o tercera
+        let midi;
+        if (bar === 7 && isLast) {
+          midi = finalMidi;
+        }  else if (isStrong && dur >= 2) {
+  const root = chordNotes[0];
+  const thirdOffset = chord.endsWith('m') ? 3 : 4;   // ← chord, no chordName
+  const third = chordNotes.find(m => ((m - root + 12) % 12) === thirdOffset);
+  const anchored = [root, third].filter(m => m !== undefined);
+  midi = nearest(anchored.length ? anchored : chordNotes, targetPerNote);
+} else if (isStrong) {
+          midi = nearest(chordNotes, targetPerNote);
+        } else {
+          midi = nearest(scaleNotes, targetPerNote);
+        }
+
+        if (Math.abs(midi - lastMidi) > 12) {
+          const dir = midi > lastMidi ? 1 : -1;
+          const pool = isStrong ? chordNotes : scaleNotes;
+          midi = nearest(pool, lastMidi + dir * 12);
+        }
+
+        midi = Math.max(MELODY_MIDI_FLOOR, Math.min(MELODY_MIDI_CEIL, midi));
+        barNotes.push({ beat: beatPos, dur, midi });
+        lastMidi = midi;
+        beatPos += dur;
+      }
+
+      // ★ CAMBIO #2: flag ternary en cada compás
+      bars.push({
+        chord,
+        notes: barNotes,
+        ternary: rhythmHasTernary(rhythm),
+      });
+    }
+
+    const bassLines = {};
+    const uniqueChords = Array.from(new Set(chords));
+    for (const c of uniqueChords) {
+      bassLines[c] = [
+        generateBassLine(c, 0),
+        generateBassLine(c, 1),
+        generateBassLine(c, 2),
+        generateBassLine(c, 3),
+      ];
+    }
+
+    return { length: 8, bars, bassLines, form: formStr, formFull: formFull };
+  }
+
+  let currentSong = null;
+  let songBoundaryMs = 0;
+
+  function ensureSongForTime(gameTime) {
+    const beatMs = 60000 / bpm;
+    const barMs = beatMs * 4;
+    const songMs = barMs * 8;
+    if (!currentSong) {
+      currentSong = generateSong();
+      songBoundaryMs = 0;
+      updateFormDisplay();
+      return;
+    }
+    let regenerated = false;
+    while (gameTime >= songBoundaryMs + songMs) {
+      currentSong = generateSong();
+      songBoundaryMs += songMs;
+      regenerated = true;
+    }
+    if (regenerated) {
+      songBarIdx = 0;
+      songNoteIdx = 0;
+      updateFormDisplay();
+    }
+  }
+
+  // =========================================================
+  //   Piano / frecuencias
+  // =========================================================
+  const MELODY_MIDI_MIN = 60;
+  const MELODY_MIDI_MAX = 108;
+  const PAD_MIDI_MIN = 36;
+  const PAD_MIDI_MAX = 60;
+  const A4 = 440;
+
+  function midiToFreq(midi) { return A4 * Math.pow(2, (midi - 69) / 12); }
+
+  const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
+  const WHITE_KEYS = (() => {
+    const arr = [];
+    for (let midi = MELODY_MIDI_MIN; midi <= MELODY_MIDI_MAX; midi++) {
+      if (WHITE_PCS.includes(midi % 12)) arr.push(midiToFreq(midi));
+    }
+    return arr;
+  })();
+  const CENTER_FREQ = 523.25;
+
+  const CHORD_PCS = {
+    C:  [0, 4, 7], Dm: [2, 5, 9], Em: [4, 7, 11],
+    F:  [5, 9, 0], G:  [7, 11, 2], Am: [9, 0, 4],
+  };
+
+  function getPadVoicing(chordName, formLetter) {
+    const pcs = CHORD_PCS[chordName];
+    if (!pcs) return [];
+    const allMidis = [];
+    for (let midi = PAD_MIDI_MIN; midi <= PAD_MIDI_MAX; midi++) {
+      if (pcs.includes(midi % 12)) allMidis.push(midi);
+    }
+    if (allMidis.length < 3) return allMidis.map(midiToFreq);
+    const n = allMidis.length;
+    let chosen;
+    switch (formLetter) {
+      case 'B': chosen = [allMidis[n-3], allMidis[n-2], allMidis[n-1]]; break;
+      case 'C': chosen = [allMidis[0], allMidis[1], allMidis[2]]; break;
+      case 'D': chosen = [allMidis[0], allMidis[Math.floor(n/2)], allMidis[n-1]]; break;
+      default:  chosen = [allMidis[Math.floor(n/2) - 1], allMidis[Math.floor(n/2)], allMidis[Math.floor(n/2) + 1]];
+    }
+    return chosen.filter(m => m !== undefined).map(midiToFreq);
+  }
+
+  function getPadNotes(chordName) { return getPadVoicing(chordName, 'A'); }
+
+  function getChordNotesFull(chordName) {
+    const pcs = CHORD_PCS[chordName];
+    const arr = [];
+    for (let midi = MELODY_MIDI_MIN; midi <= MELODY_MIDI_MAX; midi++) {
+      if (pcs.includes(midi % 12)) arr.push(midiToFreq(midi));
+    }
+    return arr;
+  }
+
+  // =========================================================
+  //   AUDIO
+  // =========================================================
+  let audioCtx = null;
+  let masterGain = null;
+  let musicBus = null;
+  let melodyBus = null;
+  let reverbSend = null;
+  let snareBuffer = null;
+  let hihatBuffer = null;
+  let activeSources = [];
+
+  // ★ CAMBIO #4: escala de dinámica global (se actualiza por sección)
+  let currentDynamicsScale = 1.0;
+
+  function initAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        audioCtx = new AC();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 1;
+        masterGain.connect(audioCtx.destination);
+
+        musicBus = audioCtx.createGain();
+        musicBus.gain.value = 1;
+        musicBus.connect(masterGain);
+
+        melodyBus = audioCtx.createGain();
+        melodyBus.gain.value = 1;
+        melodyBus.connect(masterGain);
+
+        reverbSend = audioCtx.createGain();
+        reverbSend.gain.value = 0.28;
+        const conv = makeReverb(audioCtx, 1.8, 2.4);
+        reverbSend.connect(conv).connect(masterGain);
+        melodyBus.connect(reverbSend);
+
+        snareBuffer = makeNoiseBuffer(audioCtx, 0.12);
+        hihatBuffer = makeNoiseBuffer(audioCtx, 0.04);
+      }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function makeNoiseBuffer(ctx, dur) {
+    const bufSize = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+    return buf;
+  }
+
+  function makeReverb(ctx, seconds, decay) {
+    const len = Math.floor(ctx.sampleRate * seconds);
+    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) {
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+      }
+    }
+    const conv = ctx.createConvolver();
+    conv.buffer = buf;
+    return conv;
+  }
+
+  function trackSource(node) {
+    activeSources.push(node);
+    if (activeSources.length > 800) {
+      activeSources = activeSources.filter(n => {
+        try {
+          const s = n.playbackState;
+          return s !== 'closed' && s !== 'ended' && s !== 2 && s !== 3;
+        } catch (e) { return false; }
+      });
+    }
+  }
+
+  function stopAllActiveSources() {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    for (const node of activeSources) {
+      try { node.stop(t); } catch (e) {}
+    }
+    activeSources = [];
+  }
+
+  function nearest(arr, target) {
+    let best = arr[0], bestD = Math.abs(arr[0] - target);
+    for (const v of arr) {
+      const d = Math.abs(v - target);
+      if (d < bestD) { bestD = d; best = v; }
+    }
+    return best;
+  }
+
+  function nearestIndex(arr, target) {
+    let bestI = 0, bestD = Math.abs(arr[0] - target);
+    for (let i = 1; i < arr.length; i++) {
+      const d = Math.abs(arr[i] - target);
+      if (d < bestD) { bestD = d; bestI = i; }
+    }
+    return bestI;
+  }
+
+  // ★ CAMBIO #6: pad con detune (3 osciladores por nota) + CAMBIO #4: dinámica
+  function playPadFreqs(freqs, atTime, durSec) {
+    if (!audioCtx || !freqs.length) return;
+    const t = atTime !== undefined ? atTime : audioCtx.currentTime;
+    const dur = durSec !== undefined ? durSec : 2.0;
+    const release = Math.min(0.5, dur * 0.3);
+    const sustainUntil = Math.max(0.1, dur - release);
+    const peak = 0.030 * currentDynamicsScale;
+
+    freqs.forEach(freq => {
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(peak, t + 0.10);
+      gain.gain.setValueAtTime(peak, t + sustainUntil);
+      gain.gain.linearRampToValueAtTime(0, t + dur);
+      gain.connect(musicBus);
+
+      // 3 osciladores con micro-detune → pad tipo "analog strings"
+      const detunes = [0, 5, -7]; // cents
+      for (const cents of detunes) {
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq * Math.pow(2, cents / 1200);
+        osc.connect(gain);
+        osc.start(t); osc.stop(t + dur + 0.05);
+        trackSource(osc);
+      }
+    });
+  }
+
+  function playPad(chordName, atTime, durSec) {
+    playPadFreqs(getPadVoicing(chordName, 'A'), atTime, durSec);
+  }
+
+  // ★ CAMBIO #4: dinámica en bajo
+  function playBassNote(freq, atTime, durSec) {
+    if (!audioCtx || !isFinite(freq)) return;
+    const t = atTime !== undefined ? atTime : audioCtx.currentTime;
+    if (!isFinite(t)) return;
+    const dur = durSec !== undefined ? durSec : 0.5;
+    if (!isFinite(dur) || dur <= 0) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const lp = audioCtx.createBiquadFilter();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    lp.type = 'lowpass';
+    lp.frequency.value = 380;
+    lp.Q.value = 2;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.11 * currentDynamicsScale, t + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(lp).connect(gain).connect(musicBus);
+    osc.start(t); osc.stop(t + dur + 0.03);
+    trackSource(osc);
+  }
+
+  // ★ CAMBIO #4: dinámica en batería
+  function playKick(atTime) {
+    if (!audioCtx) return;
+    const t = atTime !== undefined ? atTime : audioCtx.currentTime;
+    if (!isFinite(t)) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(0.001, t + 0.14);
+    gain.gain.setValueAtTime(0.35 * currentDynamicsScale, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    osc.connect(gain).connect(musicBus);
+    osc.start(t); osc.stop(t + 0.3);
+    trackSource(osc);
+  }
+
+  function playSnare(atTime, vol) {
+    if (!audioCtx || !snareBuffer) return;
+    const t = atTime !== undefined ? atTime : audioCtx.currentTime;
+    if (!isFinite(t)) return;
+    const v = (vol !== undefined ? vol : 0.16) * currentDynamicsScale;
+    const src = audioCtx.createBufferSource();
+    src.buffer = snareBuffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 2200;
+    filter.Q.value = 0.7;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(v, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    src.connect(filter).connect(gain).connect(musicBus);
+    src.start(t); src.stop(t + 0.13);
+    trackSource(src);
+  }
+
+  function playHiHat(atTime, vol = 0.05) {
+    if (!audioCtx || !hihatBuffer) return;
+    const t = atTime !== undefined ? atTime : audioCtx.currentTime;
+    if (!isFinite(t)) return;
+    const v = vol * currentDynamicsScale;
+    const src = audioCtx.createBufferSource();
+    src.buffer = hihatBuffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 7500;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(v, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    src.connect(filter).connect(gain).connect(musicBus);
+    src.start(t); src.stop(t + 0.05);
+    trackSource(src);
+  }
+
+  function playTom(atTime, baseFreq) {
+    if (!audioCtx) return;
+    const t = atTime !== undefined ? atTime : audioCtx.currentTime;
+    if (!isFinite(t)) return;
+    const f = baseFreq !== undefined ? baseFreq : 180;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f, t);
+    osc.frequency.exponentialRampToValueAtTime(f * 0.5, t + 0.18);
+    gain.gain.setValueAtTime(0.22 * currentDynamicsScale, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    osc.connect(gain).connect(musicBus);
+    osc.start(t); osc.stop(t + 0.28);
+    trackSource(osc);
+  }
+
+  // ★ CAMBIO #3: articulación (staccato / normal / legato)
+  function playMelodyNote(freq, quality, durSec, atTime, isPlayback, articulation) {
+    if (!audioCtx || !isFinite(freq)) return null;
+    const t = (atTime !== undefined && isFinite(atTime)) ? atTime : audioCtx.currentTime;
+    const art = articulation || 'normal';
+
+    const basePeak = isPlayback ? 0.14 : 0.26;
+    const artPeakScale = art === 'staccato' ? 1.15 : art === 'legato' ? 0.80 : 1.0;
+    const peak = (quality === 'perfect' ? basePeak : basePeak * 0.65) * artPeakScale;
+
+    const rawDur = durSec && durSec > 0.15
+      ? Math.min(durSec, 3.0)
+      : (quality === 'perfect' ? 1.4 : 0.9);
+    const dur = art === 'staccato' ? rawDur * 0.5 : rawDur;
+    const attack = art === 'staccato' ? 0.002 : art === 'legato' ? 0.04 : 0.004;
+
+    const carrier = audioCtx.createOscillator();
+    const modul   = audioCtx.createOscillator();
+    const modGain = audioCtx.createGain();
+    const tone    = audioCtx.createBiquadFilter();
+    const out     = audioCtx.createGain();
+
+    carrier.type = 'sine';
+    carrier.frequency.value = freq;
+    modul.type = 'sine';
+    modul.frequency.value = freq * 3.01;
+    modGain.gain.setValueAtTime(freq * 2.2, t);
+    modGain.gain.exponentialRampToValueAtTime(freq * 0.02, t + 0.20);
+    modul.connect(modGain).connect(carrier.frequency);
+
+    tone.type = 'lowpass';
+    tone.Q.value = 0.5;
+    const f0 = Math.min(9000, freq * 14);
+    const f1 = Math.min(2500, freq * 3);
+    tone.frequency.setValueAtTime(f0, t);
+    tone.frequency.exponentialRampToValueAtTime(f1, t + 0.6);
+
+    out.gain.setValueAtTime(0, t);
+    out.gain.linearRampToValueAtTime(peak, t + attack);
+    out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    carrier.connect(tone).connect(out).connect(melodyBus);
+    carrier.start(t); modul.start(t);
+    carrier.stop(t + dur + 0.05);
+    modul.stop(t + dur + 0.05);
+    trackSource(carrier);
+    trackSource(modul);
+
+    return {
+      stop: () => {
+        try {
+          const now = audioCtx.currentTime;
+          out.gain.cancelScheduledValues(now);
+          out.gain.setValueAtTime(out.gain.value, now);
+          out.gain.linearRampToValueAtTime(0.0001, now + 0.06);
+          carrier.stop(now + 0.08);
+          modul.stop(now + 0.08);
+        } catch (e) {}
+      },
+    };
+  }
+
+  // ★ CAMBIO #3: helper para elegir articulación según duración
+  function articulationFor(durBeats) {
+    if (durBeats <= 0.5) return 'staccato';
+    if (durBeats >= 2) return 'legato';
+    return 'normal';
+  }
+
+  let lastMelodyFreq = 523.25;
+
+  function pickMelodyNote(figura, chordName) {
+    const esLarga = figura.beats >= 1;
+    if (esLarga) {
+      const chordNotes = getChordNotesFull(chordName);
+      return nearest(chordNotes, lastMelodyFreq);
+    }
+    const idx = nearestIndex(WHITE_KEYS, lastMelodyFreq);
+    const centerIdx = nearestIndex(WHITE_KEYS, CENTER_FREQ);
+    const candidates = [];
+    for (const d of [-1, 1]) {
+      const ni = idx + d;
+      if (ni < 0 || ni >= WHITE_KEYS.length) continue;
+      const distToCenter = Math.abs(ni - centerIdx);
+      const weight = 1 / (1 + distToCenter * 0.15);
+      candidates.push({ idx: ni, weight });
+    }
+    if (!candidates.length) return WHITE_KEYS[idx];
+    const total = candidates.reduce((s, c) => s + c.weight, 0);
+    let r = Math.random() * total;
+    let chosen = candidates[0];
+    for (const c of candidates) {
+      r -= c.weight;
+      if (r <= 0) { chosen = c; break; }
+    }
+    return WHITE_KEYS[chosen.idx];
+  }
+
+  // =========================================================
+  //   BATERÍA - helpers
+  // =========================================================
+  function getSectionInfo(formFull, barIdx) {
+    const letter = formFull[barIdx] || 'A';
+    let start = barIdx;
+    while (start > 0 && formFull[start - 1] === letter) start--;
+    let end = barIdx;
+    while (end < formFull.length - 1 && formFull[end + 1] === letter) end++;
+    return { letter, start, end, length: end - start + 1, position: barIdx - start };
+  }
+
+  function getHhPositions(style) {
+    switch (style) {
+      case '4':  return [0, 1, 2, 3];
+      case '8':  return [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5];
+      case '16': return [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75];
+      default:   return [];
+    }
+  }
+
+  function hasBeat(arr, beat) {
+    if (!arr) return false;
+    for (let i = 0; i < arr.length; i++) {
+      if (Math.abs(arr[i] - beat) < 0.001) return true;
+    }
+    return false;
+  }
+
+  function getDrumPatternForBar(sec, barIdx, L) {
+    const isPhraseEnd = (barIdx % 4) === 3;
+    if (isPhraseEnd) return FILLS[Math.floor(barIdx / 4) % FILLS.length];
+    const variants = SECTION_PATTERNS[sec.letter] || SECTION_PATTERNS.A;
+    return PATTERNS[variants[sec.position % variants.length]];
+  }
+
+  function fireDrumStep(pattern, stepInBeats, audioTime, isSoft) {
+    if (!pattern) return;
+    if (hasBeat(pattern.kick,  stepInBeats)) playKick(audioTime);
+    if (hasBeat(pattern.snare, stepInBeats)) playSnare(audioTime, isSoft ? 0.08 : 0.16);
+    if (hasBeat(pattern.ghost, stepInBeats)) playSnare(audioTime, isSoft ? 0.04 : 0.06);
+    if (hasBeat(pattern.tom,   stepInBeats)) {
+      const f = stepInBeats % 1 < 0.5 ? 150 : 230;
+      playTom(audioTime, f);
+    }
+    if (pattern.hh) {
+      const hhPos = getHhPositions(pattern.hh);
+      if (hasBeat(hhPos, stepInBeats)) {
+        const isAccent = (Math.abs(stepInBeats) < 0.001 || Math.abs(stepInBeats - 2) < 0.001);
+        playHiHat(audioTime, isSoft ? 0.025 : (isAccent ? 0.08 : 0.05));
+      }
+    }
+  }
+
+  // =========================================================
+  //   ESTADO
+  // =========================================================
+  const canvas = document.getElementById('cv');
+  const ctx = canvas.getContext('2d');
+  const playBtn = document.getElementById('play');
+  const pauseBtn = document.getElementById('pause');
+  const autoBtn = document.getElementById('auto');
+  const pbBtn = document.getElementById('pb');
+  const recBtn = document.getElementById('rec');
+  const modeSelect = document.getElementById('mode');
+  const bpmInput = document.getElementById('bpm');
+  const bpmVal = document.getElementById('bpmVal');
+  const tolInput = document.getElementById('tol');
+  const tolVal = document.getElementById('tolVal');
+  const progSelect = document.getElementById('prog');
+  const cPerfect = document.getElementById('cPerfect');
+  const cGood = document.getElementById('cGood');
+  const cMiss = document.getElementById('cMiss');
+  const formContent = document.getElementById('formContent');
+
+  let W = 0, H = 0, fixedX = 150;
+  let gameState = 'stopped';
+  let gameMode = 'song';
+  let startAudioTime = 0;
+  let pausedElapsed = 0;
+
+  let notes = [];
+  let bpm = 90;
+  let tolerance = 150;
+  let progressionName = 'pop';
+  let lastPadBar = -1;
+  let currentChordName = 'C';
+  let stats = { perfect: 0, good: 0, miss: 0 };
+  let flash = null;
+  let autoplay = false;
+  let showLegend = true;
+  let playbackEnabled = true;
+
+  let nextMusicEventTime = 0;
+  let songNextHitTime = 0;
+  let songBarIdx = 0;
+  let songNoteIdx = 0;
+  let ambientNextHitTime = FIRST_HIT_MS;
+  let lastBassFreq = null;
+
+  let recording = false;
+  let recordStartRealTime = 0;
+  let recordLastCaptureTime = 0;
+  let recordFrames = [];
+  let recordMeta = null;
+
+  // =========================================================
+  //   UTILIDADES
+  // =========================================================
+  function roundRect(c, x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    c.beginPath();
+    if (c.roundRect) { c.roundRect(x, y, w, h, r); return; }
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function getSpeed() { return (W - fixedX) / TRAVEL_MS; }
+  function noteX(note, now) { return fixedX + (note.hitTime - now) * getSpeed(); }
+
+  function currentGameTime() {
+    if (gameState === 'stopped' || !audioCtx) return 0;
+    if (gameState === 'paused') return pausedElapsed;
+    return pausedElapsed + (audioCtx.currentTime - startAudioTime) * 1000;
+  }
+
+  function chordAtTime(gameTime) {
+    const beatMs = 60000 / bpm;
+    const barMs = beatMs * 4;
+    const bar = Math.max(0, Math.floor(gameTime / barMs));
+    const prog = PROGRESSIONS[progressionName];
+    return prog[bar % prog.length];
+  }
+
+  function updateStats() {
+    cPerfect.textContent = stats.perfect;
+    cGood.textContent = stats.good;
+    cMiss.textContent = stats.miss;
+  }
+
+  function updateFormDisplay() {
+    if (!currentSong) {
+      formContent.className = 'idle';
+      formContent.textContent = '— sin canción —';
+      return;
+    }
+    const str  = currentSong.form || '????';
+    const full = currentSong.formFull || (str + str);
+    const L = full.length;
+    const nowBar = (gameState === 'playing' && L > 0)
+      ? (Math.floor(currentGameTime() / (60000 / bpm * 4)) % L)
+      : -1;
+
+    formContent.className = '';
+    let html = `<span class="form-str">${str}</span><span class="arrow"> → </span><span class="form-full">`;
+    for (let i = 0; i < L; i++) {
+      if (i === nowBar) html += `<span class="bar-now">${full[i]}</span>`;
+      else html += full[i];
+    }
+    html += `</span>`;
+    formContent.innerHTML = html;
+  }
+
+  function updateButtons() {
+    if (gameState === 'stopped') {
+      playBtn.textContent = '▶ Play';
+      playBtn.classList.remove('stop');
+      pauseBtn.disabled = true;
+      pauseBtn.textContent = '⏸ Pausa';
+      pauseBtn.classList.remove('resume');
+    } else if (gameState === 'playing') {
+      playBtn.textContent = '■ Parar';
+      playBtn.classList.add('stop');
+      pauseBtn.disabled = false;
+      pauseBtn.textContent = '⏸ Pausa';
+      pauseBtn.classList.remove('resume');
+    } else if (gameState === 'paused') {
+      playBtn.textContent = '■ Parar';
+      playBtn.classList.add('stop');
+      pauseBtn.disabled = false;
+      pauseBtn.textContent = '▶ Reanudar';
+      pauseBtn.classList.add('resume');
+    }
+    autoBtn.textContent = autoplay ? '🤖 Auto: ON' : '🤖 Auto: OFF';
+    autoBtn.classList.toggle('on', autoplay);
+    pbBtn.textContent = playbackEnabled ? '🎼 Playback: ON' : '🎼 Playback: OFF';
+    pbBtn.classList.toggle('on', playbackEnabled);
+    progSelect.disabled = (gameMode === 'song');
+  }
+
+  function updateRecButton() {
+    if (recording) {
+      recBtn.textContent = `⏹ Detener (${recordFrames.length})`;
+      recBtn.classList.add('on');
+    } else {
+      recBtn.textContent = '⏺ Grabar';
+      recBtn.classList.remove('on');
+    }
+  }
+
+  // =========================================================
+  //   GRABACIÓN
+  // =========================================================
+  function startRecording() {
+    recording = true;
+    recordStartRealTime = performance.now();
+    recordLastCaptureTime = 0;
+    recordFrames = [];
+    recordMeta = {
+      version: REC_VERSION, tipo: 'ritmo-game-recording',
+      fecha: new Date().toISOString(), fps: RECORD_FPS,
+      intervalo_ms: Math.round(RECORD_INTERVAL * 1000) / 1000,
+      modo: gameMode, progresion: progressionName,
+      bpm_inicial: bpm, tolerancia_inicial: tolerance,
+      playback: playbackEnabled,
+      canvas: { w: Math.round(W), h: Math.round(H), fixedX: Math.round(fixedX) },
+      figuras: FIGURES.map(f => ({ nombre: f.name, beats: f.beats, color: f.color })),
+      cancion: gameMode === 'song' && currentSong ? {
+        forma: currentSong.form, forma_completa: currentSong.formFull,
+        compases: currentSong.bars.length,
+        estructura: currentSong.bars.map(b => ({
+          acorde: b.chord,
+          notas: b.notes.map(n => ({ beat: n.beat, dur: n.dur, midi: n.midi })),
+        })),
+      } : null,
+    };
+    captureFrame(currentGameTime());
+    updateRecButton();
+  }
+
+  function stopRecording() {
+    if (!recording) return;
+    recording = false;
+    updateRecButton();
+    if (recordFrames.length === 0) { alert('No se grabó ningún frame.'); return; }
+    const duracion_ms = recordFrames[recordFrames.length - 1].t;
+    const output = {
+      ...recordMeta, duracion_ms,
+      total_frames: recordFrames.length,
+      fps_real: Math.round((recordFrames.length / (duracion_ms / 1000)) * 100) / 100,
+      frames: recordFrames,
+    };
+    const json = JSON.stringify(output);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const filename = `ritmo-${gameMode}-${ts}.json`;
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    recordFrames = [];
+  }
+
+  function captureFrame(now) {
+    if (!recording) return;
+    const t = performance.now() - recordStartRealTime;
+    const frameNotes = [];
+    for (const n of notes) {
+      const isHit = n.state === 'hit';
+      const x = isHit ? n.freezeX : noteX(n, now);
+      if (x < -50 || x > W + 50) continue;
+      frameNotes.push({
+        x: Math.round(x * 10) / 10, w: Math.round(n.width * 10) / 10,
+        color: n.color, state: n.state, beats: n.beats,
+      });
+    }
+    const frame = {
+      t: Math.round(t), gt: Math.round(now), estado: gameState,
+      acorde: currentChordName, bpm, notas: frameNotes,
+      stats: { perfect: stats.perfect, bien: stats.good, fallo: stats.miss },
+    };
+    if (lastMelodyFreq) frame.melodia_hz = Math.round(lastMelodyFreq * 100) / 100;
+    if (lastBassFreq) frame.bajo_hz = Math.round(lastBassFreq * 100) / 100;
+    if (flash) {
+      const k = (now - flash.t) / 280;
+      if (k >= 0 && k < 1) frame.flash = { calidad: flash.quality, progreso: Math.round(k * 1000) / 1000 };
+    }
+    frame.auto = autoplay;
+    frame.playback = playbackEnabled;
+    frame.leyenda_visible = showLegend;
+    recordFrames.push(frame);
+  }
+
+  // =========================================================
+  //   RESIZE
+  // =========================================================
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    W = Math.max(320, rect.width);
+    H = Math.max(160, rect.height);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    fixedX = Math.max(80, Math.min(W * 0.16, 200));
+  }
+  window.addEventListener('resize', resize);
+
+  // =========================================================
+  //   CONTROL DE JUEGO
+  // =========================================================
+  function start() {
+    initAudio();
+    if (!audioCtx) return;
+    resize();
+    stopAllActiveSources();
+    setMusicBusGain(1, 0);
+
+    gameState = 'playing';
+    startAudioTime = audioCtx.currentTime;
+    pausedElapsed = 0;
+    notes = [];
+    stats = { perfect: 0, good: 0, miss: 0 };
+    flash = null;
+    lastPadBar = -1;
+    lastMelodyFreq = 523.25;
+    lastBassFreq = null;
+    nextMusicEventTime = 0;
+    songNextHitTime = 0;
+    songBarIdx = 0;
+    songNoteIdx = 0;
+    ambientNextHitTime = FIRST_HIT_MS;
+    currentDynamicsScale = 1.0;
+
+    currentSong = generateSong();
+    songBoundaryMs = 0;
+
+    updateStats();
+    updateButtons();
+    updateFormDisplay();
+  }
+
+  function stop() {
+    gameState = 'stopped';
+    notes = [];
+    flash = null;
+    pausedElapsed = 0;
+    lastPadBar = -1;
+    stopAllActiveSources();
+    setMusicBusGain(0, 0.1);
+    updateButtons();
+    updateFormDisplay();
+  }
+
+  function pause() {
+    if (gameState !== 'playing' || !audioCtx) return;
+    pausedElapsed += (audioCtx.currentTime - startAudioTime) * 1000;
+    gameState = 'paused';
+    stopAllActiveSources();
+    setMusicBusGain(0, 0.05);
+    updateButtons();
+  }
+
+  function resume() {
+    if (gameState !== 'paused' || !audioCtx) return;
+    startAudioTime = audioCtx.currentTime;
+    gameState = 'playing';
+    setMusicBusGain(1, 0.05);
+
+    const now = currentGameTime();
+    const beatMs = 60000 / bpm;
+    const semicorcheaMs = beatMs / 4;
+    nextMusicEventTime = Math.ceil(now / semicorcheaMs) * semicorcheaMs;
+
+    if (gameMode === 'song') {
+      let safety = 0;
+      while (songNextHitTime < now && safety++ < 2000) {
+        const bar = currentSong.bars[songBarIdx];
+        const note = bar.notes[songNoteIdx];
+        songNextHitTime += note.dur * beatMs;
+        songNoteIdx++;
+        if (songNoteIdx >= bar.notes.length) {
+          songNoteIdx = 0;
+          songBarIdx++;
+          if (songBarIdx >= currentSong.bars.length) songBarIdx = 0;
+        }
+      }
+      if (songNextHitTime < now) songNextHitTime = now;
+    } else {
+      if (ambientNextHitTime < now) ambientNextHitTime = now;
+    }
+    lastPadBar = -1;
+    updateButtons();
+  }
+
+  function setMusicBusGain(value, rampSec) {
+    if (!musicBus || !audioCtx) return;
+    const t = audioCtx.currentTime;
+    musicBus.gain.cancelScheduledValues(t);
+    musicBus.gain.setValueAtTime(musicBus.gain.value, t);
+    musicBus.gain.linearRampToValueAtTime(value, t + (rampSec || 0.05));
+  }
+
+  // =========================================================
+  //   GENERACIÓN DE HITS
+  // =========================================================
+  function generateAmbientHits(now) {
+    const beatMs = 60000 / bpm;
+    if (ambientNextHitTime < now - 100) ambientNextHitTime = now;
+    let guard = 0;
+    while (ambientNextHitTime < now + TRAVEL_MS + 200 && guard++ < MAX_CATCHUP_EVENTS) {
+      const fig = pickFigure();
+      notes.push({
+        hitTime: ambientNextHitTime,
+        beats: fig.beats, color: fig.color, width: figureWidth(fig.beats),
+        freq: null, state: 'pending', quality: null,
+        freezeX: 0, stateTime: 0, playback: null,
+      });
+      ambientNextHitTime += fig.beats * beatMs;
+    }
+  }
+
+  function generateSongHits(now) {
+    const beatMs = 60000 / bpm;
+    const target = now + TRAVEL_MS + 200;
+
+    if (songNextHitTime < now - 500) {
+      let safety = 0;
+      while (songNextHitTime < now && safety++ < 2000) {
+        const bar = currentSong.bars[songBarIdx];
+        const note = bar.notes[songNoteIdx];
+        songNextHitTime += note.dur * beatMs;
+        songNoteIdx++;
+        if (songNoteIdx >= bar.notes.length) {
+          songNoteIdx = 0;
+          songBarIdx++;
+          if (songBarIdx >= currentSong.bars.length) songBarIdx = 0;
+        }
+      }
+      if (songNextHitTime < now) songNextHitTime = now;
+    }
+
+    let guard = 0;
+    while (songNextHitTime < target && guard++ < MAX_CATCHUP_EVENTS) {
+      const bar = currentSong.bars[songBarIdx];
+      const note = bar.notes[songNoteIdx];
+      const freq = midiToFreq(note.midi);
+
+      let playbackHandle = null;
+      if (playbackEnabled && audioCtx && isFinite(freq)) {
+        const audioTime = audioCtx.currentTime + (songNextHitTime - now) / 1000;
+        const durSec = Math.min((note.dur * beatMs) / 1000 * 0.95, 2.5);
+        if (isFinite(audioTime) && audioTime > audioCtx.currentTime) {
+          // ★ CAMBIO #3: articulación automática por duración
+          const art = articulationFor(note.dur);
+          playbackHandle = playMelodyNote(freq, 'good', durSec, audioTime, true, art);
+        }
+      }
+
+      notes.push({
+        hitTime: songNextHitTime,
+        beats: note.dur, color: colorForDuration(note.dur), width: figureWidth(note.dur),
+        freq: freq, state: 'pending', quality: null,
+        freezeX: 0, stateTime: 0,
+        playback: playbackHandle,
+      });
+
+      songNextHitTime += note.dur * beatMs;
+      songNoteIdx++;
+      if (songNoteIdx >= bar.notes.length) {
+        songNoteIdx = 0;
+        songBarIdx++;
+        if (songBarIdx >= currentSong.bars.length) songBarIdx = 0;
+      }
+    }
+  }
+
+  // =========================================================
+  //   MÚSICA DE FONDO - scheduler a 16avos
+  // =========================================================
+  function scheduleBackgroundMusic(gameTime) {
+    if (!audioCtx) return;
+    if (!isFinite(gameTime) || !isFinite(bpm) || bpm <= 0) return;
+    const beatMs = 60000 / bpm;
+    if (!isFinite(beatMs) || beatMs <= 0) return;
+    const semicorcheaMs = beatMs / 4;
+    const barMs = beatMs * 4;
+    const horizon = gameTime + SCHEDULE_HORIZON_MS;
+
+    if (nextMusicEventTime < gameTime - MIN_LOOKAHEAD_MS) {
+      nextMusicEventTime = Math.ceil(gameTime / semicorcheaMs) * semicorcheaMs;
+    }
+
+    let safety = 0;
+    while (nextMusicEventTime < horizon && safety++ < MAX_CATCHUP_EVENTS) {
+      if (nextMusicEventTime < gameTime) {
+        nextMusicEventTime += semicorcheaMs;
+        continue;
+      }
+
+      const audioTime = audioCtx.currentTime + (nextMusicEventTime - gameTime) / 1000;
+      if (!isFinite(audioTime)) { nextMusicEventTime += semicorcheaMs; continue; }
+
+      const beatFloat = nextMusicEventTime / beatMs;
+      let beatInBar = beatFloat - Math.floor(beatFloat / 4) * 4;
+      if (beatInBar < 0) beatInBar += 4;
+      const stepIndex = Math.round(beatInBar * 4) % 16;
+      const stepInBeats = stepIndex / 4;
+      const isOnBeat = (stepIndex % 4 === 0);
+
+      const L = currentSong ? currentSong.bars.length : 8;
+      const bar = Math.floor(nextMusicEventTime / barMs);
+      const barIdx = ((bar % L) + L) % L;
+      const chordName = (currentSong && currentSong.bars[barIdx])
+        ? currentSong.bars[barIdx].chord : 'C';
+
+      const formFull = (currentSong && currentSong.formFull) ? currentSong.formFull : 'AAAAAAAA';
+      const sec = getSectionInfo(formFull, barIdx);
+
+      const isIntro = barIdx < INTRO_BARS;
+      const isOutro = barIdx >= (L - OUTRO_BARS);
+      const isSoft = isIntro || isOutro;
+
+      // ★ CAMBIO #4: actualizar dinámica por sección + crescendo
+      const dynBase = SECTION_DYNAMICS[sec.letter] || 1.0;
+      const dynCrescendo = 1 + 0.08 * (sec.position / Math.max(1, sec.length - 1));
+      currentDynamicsScale = dynBase * dynCrescendo;
+
+      // ★ CAMBIO #2: si el compás es ternario, usar batería neutra
+      if (!isIntro) {
+        const barData = currentSong && currentSong.bars[barIdx];
+        const isTernaryBar = barData && barData.ternary;
+        const drumPattern = isTernaryBar
+          ? TERNARY_BAR
+          : getDrumPatternForBar(sec, barIdx, L);
+        fireDrumStep(drumPattern, stepInBeats, audioTime, isSoft);
+      }
+
+      // ---------- BAJO ----------
+      if (isOnBeat) {
+        const beatIdx = stepIndex / 4;
+        const bassEntry = currentSong ? currentSong.bassLines[chordName] : null;
+        if (bassEntry && Array.isArray(bassEntry[0])) {
+          const bassVariant = ({ A: 0, B: 1, C: 2, D: 3 })[sec.letter] || 0;
+          const pattern = bassEntry[bassVariant % bassEntry.length];
+          const bassMidi = pattern[beatIdx];
+          if (bassMidi !== undefined) {
+            const bassFreq = midiToFreq(bassMidi);
+            if (isFinite(bassFreq)) {
+              lastBassFreq = bassFreq;
+              const bassVolScale = isSoft ? 0.55 : 1.0;
+              playBassNote(bassFreq, audioTime, beatMs / 1000 * 0.85 * bassVolScale);
+            }
+          }
+        }
+      }
+
+      // ---------- PAD ----------
+      if (isOnBeat && stepIndex === 0) {
+        currentChordName = chordName;
+        const padFreqs = getPadVoicing(chordName, sec.letter);
+        playPadFreqs(padFreqs, audioTime, barMs / 1000);
+      }
+
+      nextMusicEventTime += semicorcheaMs;
+    }
+  }
+
+  // =========================================================
+  //   UPDATE
+  // =========================================================
+  let formDisplayFrameCounter = 0;
+
+  function update(now) {
+    const beatMs = 60000 / bpm;
+    const barMs = beatMs * 4;
+
+    if (gameMode === 'ambient') {
+      const currentBar = Math.floor(now / barMs);
+      if (currentBar !== lastPadBar) {
+        lastPadBar = currentBar;
+        const prog = PROGRESSIONS[progressionName];
+        currentChordName = prog[currentBar % prog.length];
+        currentDynamicsScale = 1.0;
+        playPad(currentChordName, audioCtx.currentTime, barMs / 1000);
+      }
+      generateAmbientHits(now);
+    } else {
+      ensureSongForTime(now);
+      scheduleBackgroundMusic(now);
+      generateSongHits(now);
+
+      formDisplayFrameCounter++;
+      if (formDisplayFrameCounter >= 6) {
+        formDisplayFrameCounter = 0;
+        updateFormDisplay();
+      }
+    }
+
+    if (autoplay) {
+      for (const n of notes) {
+        if (n.state === 'pending' && now >= n.hitTime) autoHit(n, n.hitTime);
+      }
+    }
+
+    for (const n of notes) {
+      if (n.state === 'pending' && now - n.hitTime > tolerance) {
+        n.state = 'miss';
+        n.stateTime = now;
+        stats.miss++;
+        updateStats();
+      }
+    }
+
+    notes = notes.filter(n => {
+      if (n.state === 'hit') return now - n.stateTime < HIT_FADE_MS;
+      return noteX(n, now) > -100;
+    });
+  }
+
+  function autoHit(note, gameTime) {
+    note.state = 'hit';
+    note.stateTime = gameTime;
+    note.quality = 'perfect';
+    note.freezeX = fixedX;
+    stats.perfect++;
+    flash = { t: gameTime, quality: 'perfect' };
+
+    if (note.playback) { try { note.playback.stop(); } catch(e){} note.playback = null; }
+
+    let freq;
+    if (gameMode === 'song') freq = note.freq;
+    else {
+      const chordName = chordAtTime(note.hitTime);
+      freq = pickMelodyNote(note, chordName);
+      lastMelodyFreq = freq;
+    }
+
+    const durSec = Math.max(0.25, (note.beats * 60000 / bpm) / 1000 * 0.9);
+    // ★ CAMBIO #3: articulación en el hit del jugador
+    const art = articulationFor(note.beats);
+    playMelodyNote(freq, 'perfect', durSec, undefined, false, art);
+    updateStats();
+  }
+
+  function handleHit() {
+    if (gameState !== 'playing') return;
+    if (autoplay) return;
+    const now = currentGameTime();
+
+    let best = null, bestD = Infinity;
+    for (const n of notes) {
+      if (n.state !== 'pending') continue;
+      const d = Math.abs(now - n.hitTime);
+      if (d < bestD) { bestD = d; best = n; }
+    }
+
+    if (best && bestD <= tolerance) {
+      best.state = 'hit';
+      best.stateTime = now;
+      best.freezeX = noteX(best, now);
+
+      if (bestD <= tolerance * 0.5) { best.quality = 'perfect'; stats.perfect++; }
+      else { best.quality = 'good'; stats.good++; }
+      flash = { t: now, quality: best.quality };
+
+      if (best.playback) { try { best.playback.stop(); } catch(e){} best.playback = null; }
+
+      let freq;
+      if (gameMode === 'song') freq = best.freq;
+      else {
+        const chordName = chordAtTime(best.hitTime);
+        freq = pickMelodyNote(best, chordName);
+        lastMelodyFreq = freq;
+      }
+
+      const durSec = Math.max(0.25, (best.beats * 60000 / bpm) / 1000 * 0.9);
+      // ★ CAMBIO #3: articulación en el hit del jugador
+      const art = articulationFor(best.beats);
+      playMelodyNote(freq, best.quality, durSec, undefined, false, art);
+    } else {
+      flash = { t: now, quality: 'fail' };
+    }
+    updateStats();
+  }
+
+  // =========================================================
+  //   DIBUJO
+  // =========================================================
+  function drawBackground() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#0d1017');
+    g.addColorStop(0.5, '#0b0d12');
+    g.addColorStop(1, '#0d1017');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 6; i++) {
+      const y = (H / 6) * i;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+  }
+
+  function drawToleranceBand() {
+    const halfPx = tolerance * getSpeed();
+    if (halfPx <= 1) return;
+    const g = ctx.createLinearGradient(fixedX - halfPx, 0, fixedX + halfPx, 0);
+    g.addColorStop(0, 'rgba(96,165,250,0)');
+    g.addColorStop(0.5, 'rgba(96,165,250,0.10)');
+    g.addColorStop(1, 'rgba(96,165,250,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(fixedX - halfPx, 0, halfPx * 2, H);
+  }
+
+  function drawNote(x, note, now) {
+    const h = H * 0.60;
+    const w = note.width;
+    let color = note.color, alpha = 1, scale = 1, glow = 16;
+
+    if (note.state === 'hit') {
+      const k = (now - note.stateTime) / HIT_FADE_MS;
+      if (k >= 1) return;
+      alpha = 1 - k;
+      scale = 1 + k * 0.35;
+      color = note.quality === 'perfect' ? '#22d3ee' : '#4ade80';
+      glow = 30;
+    } else if (note.state === 'miss') {
+      color = '#4b5563'; alpha = 0.45; glow = 0;
+    }
+
+    const dw = w * scale;
+    const dh = h * (note.state === 'hit' ? scale : 1);
+    const dy = (H - dh) / 2;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    if (glow > 0) { ctx.shadowColor = color; ctx.shadowBlur = glow; }
+    ctx.fillStyle = color;
+    roundRect(ctx, x - dw / 2, dy, dw, dh, Math.min(7, dw / 2));
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    if (dw >= 6) {
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fillRect(x - 1, dy + 3, 2, dh - 6);
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    roundRect(ctx, x - dw / 2 + 2, dy + 2, Math.max(2, dw - 4), dh * 0.12, 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawFixedNeedle(now, active) {
+    const h = H * 0.72;
+    const y = (H - h) / 2;
+    const g = ctx.createRadialGradient(fixedX, H / 2, 0, fixedX, H / 2, 70);
+    g.addColorStop(0, 'rgba(255,255,255,0.10)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(fixedX - 70, H / 2 - 70, 140, 140);
+    ctx.save();
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = active ? 14 : 8;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(fixedX - 1.5, y, 3, h);
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.arc(fixedX, y, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(fixedX, y + h, 4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function drawFlash(now) {
+    if (!flash) return;
+    const k = (now - flash.t) / 280;
+    if (k >= 1) { flash = null; return; }
+    const color = flash.quality === 'perfect' ? '#22d3ee'
+                : flash.quality === 'good' ? '#4ade80' : '#ef4444';
+    ctx.save();
+    ctx.globalAlpha = (1 - k) * 0.85;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(fixedX, H / 2, 26 + k * 110, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = (1 - k) * 0.35;
+    ctx.fillStyle = color;
+    ctx.fillRect(fixedX - 2, 0, 4, H);
+    ctx.restore();
+  }
+
+  function drawChordLabel() {
+    if (gameState === 'stopped') return;
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = '#93c5fd';
+    ctx.font = '700 20px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+    ctx.fillText(currentChordName, W - 20, 18);
+    ctx.globalAlpha = 0.3;
+    ctx.font = '600 11px system-ui, sans-serif';
+    ctx.fillText('ACORDE', W - 20, 42);
+    ctx.restore();
+  }
+
+  function drawPianoBar() {
+    if (gameState === 'stopped') return;
+    const margin = 24;
+    const barW = W - margin * 2;
+    const barY = H - 32;
+    const barH = 10;
+    const VIS_MIN = 36, VIS_MAX = 108;
+
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#1a1f2b';
+    roundRect(ctx, margin, barY, barW, barH, 5);
+    ctx.fill();
+
+    const boundaryT = (MELODY_MIDI_MIN - VIS_MIN) / (VIS_MAX - VIS_MIN);
+    const boundaryX = margin + boundaryT * barW;
+
+    ctx.globalAlpha = 0.20;
+    ctx.fillStyle = '#3b82f6';
+    roundRect(ctx, margin, barY, boundaryX - margin, barH, 5);
+    ctx.fill();
+    ctx.fillStyle = '#22d3ee';
+    roundRect(ctx, boundaryX, barY, margin + barW - boundaryX, barH, 5);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(boundaryX - 1, barY - 2, 2, barH + 4);
+
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = '#60a5fa';
+    for (let midi = VIS_MIN; midi <= VIS_MAX; midi++) {
+      if (midi % 12 === 0) {
+        const t = (midi - VIS_MIN) / (VIS_MAX - VIS_MIN);
+        const x = margin + t * barW;
+        ctx.fillRect(x - 0.5, barY - 3, 1, barH + 6);
+      }
+    }
+
+    function plotNote(freq, color, radius) {
+      if (!freq) return;
+      const midiFloat = 69 + 12 * Math.log2(freq / A4);
+      const t = Math.max(0, Math.min(1, (midiFloat - VIS_MIN) / (VIS_MAX - VIS_MIN)));
+      const x = margin + t * barW;
+      ctx.globalAlpha = 1;
+      ctx.shadowColor = color; ctx.shadowBlur = 12;
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(x, barY + barH / 2, radius, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.beginPath(); ctx.arc(x, barY + barH / 2, radius * 0.35, 0, Math.PI * 2); ctx.fill();
+    }
+
+    if (gameMode === 'song' && lastBassFreq) plotNote(lastBassFreq, '#3b82f6', 5);
+    plotNote(lastMelodyFreq, '#22d3ee', 6);
+
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '600 9px system-ui, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText('C2', margin, barY - 6);
+    ctx.textAlign = 'center'; ctx.fillText('C4', boundaryX, barY - 6);
+    ctx.textAlign = 'right'; ctx.fillText('C8', margin + barW, barY - 6);
+
+    ctx.globalAlpha = 0.45;
+    ctx.font = '700 8px system-ui, sans-serif';
+    ctx.textAlign = 'left'; ctx.fillStyle = '#60a5fa';
+    ctx.fillText('BAJOS', margin + 4, barY + barH + 9);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#22d3ee';
+    ctx.fillText('MELODÍA', margin + barW - 4, barY + barH + 9);
+    ctx.restore();
+  }
+
+  function drawLegend() {
+    if (!showLegend) return;
+    if (gameState === 'stopped') return;
+    const items = FIGURES, rowH = 14, padding = 10;
+    const boxW = 175, boxH = padding * 2 + items.length * rowH + 18;
+    const x0 = 16, y0 = H - 70 - boxH;
+
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = 'rgba(13,16,23,0.85)';
+    roundRect(ctx, x0, y0, boxW, boxH, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    roundRect(ctx, x0, y0, boxW, boxH, 8); ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = '700 10px system-ui, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('FIGURAS', x0 + padding, y0 + padding);
+
+    items.forEach((f, i) => {
+      const yy = y0 + padding + 16 + i * rowH;
+      ctx.fillStyle = f.color;
+      roundRect(ctx, x0 + padding, yy + 2, 8, 8, 2); ctx.fill();
+      ctx.fillStyle = 'rgba(229,231,235,0.85)';
+      ctx.font = '500 10px system-ui, sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(f.name, x0 + padding + 14, yy + 6);
+      const label = f.beats >= 1
+        ? f.beats + (f.beats === 1 ? ' tiempo' : ' tiempos')
+        : (f.beats === 1/3 ? '⅓ tiempo' : f.beats + ' tiempo');
+      ctx.fillStyle = 'rgba(156,163,175,0.7)';
+      ctx.textAlign = 'right';
+      ctx.fillText(label, x0 + boxW - padding, yy + 6);
+      ctx.textAlign = 'left';
+    });
+    ctx.restore();
+  }
+
+  function drawAutoBadge() {
+    if (!autoplay || gameState === 'stopped') return;
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = 'rgba(5,150,105,0.20)';
+    roundRect(ctx, 16, 16, 96, 28, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(16,185,129,0.6)'; ctx.lineWidth = 1;
+    roundRect(ctx, 16, 16, 96, 28, 8); ctx.stroke();
+    ctx.fillStyle = '#6ee7b7';
+    ctx.font = '700 12px system-ui, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText('🤖  AUTOPLAY', 28, 30);
+    ctx.restore();
+  }
+
+  function drawPlaybackBadge() {
+    if (!playbackEnabled || gameState === 'stopped') return;
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = 'rgba(124,58,237,0.20)';
+    roundRect(ctx, 16, 88, 138, 28, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(167,139,250,0.6)'; ctx.lineWidth = 1;
+    roundRect(ctx, 16, 88, 138, 28, 8); ctx.stroke();
+    ctx.fillStyle = '#c4b5fd';
+    ctx.font = '700 12px system-ui, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText('🎼  PLAYBACK', 28, 102);
+    ctx.restore();
+  }
+
+  function drawRecBadge(now) {
+    if (!recording) return;
+    ctx.save();
+    const pulse = 0.6 + 0.4 * Math.abs(Math.sin(now / 350));
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = 'rgba(220,38,38,0.20)';
+    roundRect(ctx, 16, 52, 118, 28, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(239,68,68,0.7)'; ctx.lineWidth = 1;
+    roundRect(ctx, 16, 52, 118, 28, 8); ctx.stroke();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath(); ctx.arc(30, 66, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = '#fecaca';
+    ctx.font = '700 11px system-ui, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(`REC  ${recordFrames.length}f`, 44, 67);
+    ctx.restore();
+  }
+
+  function drawModeBadge() {
+    if (gameState === 'stopped') return;
+    ctx.save();
+    const label = gameMode === 'song' ? '🎵  CANCIÓN' : '🌫️  AMBIENT';
+    const color = gameMode === 'song' ? '#a78bfa' : '#94a3b8';
+    const bg = gameMode === 'song' ? 'rgba(139,92,246,0.20)' : 'rgba(148,163,184,0.15)';
+    const border = gameMode === 'song' ? 'rgba(167,139,250,0.6)' : 'rgba(148,163,184,0.5)';
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = bg;
+    roundRect(ctx, W - 146, 16, 130, 26, 8); ctx.fill();
+    ctx.strokeStyle = border; ctx.lineWidth = 1;
+    roundRect(ctx, W - 146, 16, 130, 26, 8); ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.font = '700 12px system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, W - 146 + 65, 30);
+    ctx.restore();
+  }
+
+  function drawFormBadge() {
+    if (gameState === 'stopped' || !currentSong) return;
+    if (gameMode !== 'song') return;
+
+    const str  = currentSong.form || '????';
+    const full = currentSong.formFull || (str + str);
+    const L = full.length;
+    const nowBar = Math.floor(currentGameTime() / (60000 / bpm * 4)) % L;
+
+    ctx.save();
+    const boxW = 200, boxH = 46;
+    const x0 = W - boxW - 20, y0 = 68;
+
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = 'rgba(139,92,246,0.15)';
+    roundRect(ctx, x0, y0, boxW, boxH, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(167,139,250,0.5)'; ctx.lineWidth = 1;
+    roundRect(ctx, x0, y0, boxW, boxH, 8); ctx.stroke();
+
+    ctx.fillStyle = 'rgba(196,181,253,0.65)';
+    ctx.font = '700 9px system-ui, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('FORMA', x0 + 10, y0 + 6);
+
+    ctx.fillStyle = '#ddd6fe';
+    ctx.font = '700 14px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(str, x0 + 10, y0 + 20);
+
+    ctx.fillStyle = 'rgba(167,139,250,0.5)';
+    ctx.font = '700 11px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.fillText('→', x0 + 58, y0 + 20);
+
+    let cursorX = x0 + 82;
+    const letterY = y0 + 20;
+    for (let i = 0; i < L; i++) {
+      const isNow = (i === nowBar && gameState === 'playing');
+      if (isNow) {
+        ctx.fillStyle = 'rgba(240,171,252,0.20)';
+        roundRect(ctx, cursorX - 3, letterY - 9, 14, 18, 4); ctx.fill();
+        ctx.fillStyle = '#f0abfc';
+        ctx.shadowColor = '#f0abfc'; ctx.shadowBlur = 6;
+      } else {
+        ctx.fillStyle = 'rgba(167,139,250,0.85)'; ctx.shadowBlur = 0;
+      }
+      ctx.font = '700 13px ui-monospace, SFMono-Regular, Menlo, monospace';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(full[i], cursorX, letterY);
+      ctx.shadowBlur = 0;
+      cursorX += 13;
+    }
+    ctx.restore();
+  }
+
+  function drawPauseOverlay() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(11,13,18,0.55)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(245,158,11,0.95)';
+    ctx.font = '700 42px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('PAUSA', W / 2, H / 2);
+    ctx.fillStyle = 'rgba(229,231,235,0.7)';
+    ctx.font = '500 14px system-ui, -apple-system, sans-serif';
+    ctx.fillText('Pulsa  ▶ Reanudar  para continuar', W / 2, H / 2 + 44);
+    ctx.restore();
+  }
+
+  function drawIdle() {
+    ctx.clearRect(0, 0, W, H);
+    drawBackground();
+    drawFixedNeedle(0, false);
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.font = '600 16px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Pulsa  ▶ Play  para empezar', W * 0.6, H / 2);
+    ctx.restore();
+  }
+
+  function draw(now) {
+    ctx.clearRect(0, 0, W, H);
+    drawBackground();
+    drawToleranceBand();
+
+    for (const n of notes) {
+      const x = n.state === 'hit' ? n.freezeX : noteX(n, now);
+      drawNote(x, n, now);
+    }
+
+    drawFixedNeedle(now, true);
+    drawFlash(now);
+    drawChordLabel();
+    drawFormBadge();
+    drawPianoBar();
+    drawLegend();
+    drawAutoBadge();
+    drawPlaybackBadge();
+    drawModeBadge();
+    drawRecBadge(now);
+
+    if (gameState === 'playing') {
+      const beatMs = 60000 / bpm;
+      const phase = (now % beatMs) / beatMs;
+      const pulse = Math.pow(1 - phase, 3);
+      ctx.save();
+      ctx.globalAlpha = 0.10 + pulse * 0.5;
+      ctx.fillStyle = '#60a5fa';
+      ctx.beginPath();
+      ctx.arc(28, H - 28, 5 + pulse * 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    if (gameState === 'paused') drawPauseOverlay();
+  }
+
+  // =========================================================
+  //   LOOP
+  // =========================================================
+  function frame() {
+    requestAnimationFrame(frame);
+    const now = currentGameTime();
+    const nowPerf = performance.now();
+
+    if (recording && nowPerf - recordLastCaptureTime >= RECORD_INTERVAL) {
+      recordLastCaptureTime = nowPerf;
+      captureFrame(now);
+      updateRecButton();
+    }
+
+    if (gameState === 'stopped') { drawIdle(); return; }
+    if (gameState === 'playing') update(now);
+    draw(now);
+  }
+
+  // =========================================================
+  //   EVENTOS
+  // =========================================================
+  playBtn.addEventListener('click', () => {
+    initAudio();
+    if (gameState === 'stopped') start(); else stop();
+  });
+
+  pauseBtn.addEventListener('click', () => {
+    if (gameState === 'playing') pause();
+    else if (gameState === 'paused') resume();
+  });
+
+  autoBtn.addEventListener('click', () => {
+    autoplay = !autoplay;
+    updateButtons();
+  });
+
+  pbBtn.addEventListener('click', () => {
+    playbackEnabled = !playbackEnabled;
+    updateButtons();
+  });
+
+  recBtn.addEventListener('click', () => {
+    if (recording) stopRecording(); else startRecording();
+  });
+
+  modeSelect.addEventListener('change', () => {
+    gameMode = modeSelect.value;
+    if (gameState !== 'stopped') stop();
+    updateButtons();
+    updateFormDisplay();
+  });
+
+  canvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    initAudio();
+    handleHit();
+  });
+
+      window.addEventListener('keydown', (e) => {
+    // --- Teclas de golpeo: Espacio, Enter, Flecha arriba ---
+    if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowUp') {
+      e.preventDefault();     // evita scroll y que la flecha mueva sliders/selects
+      if (e.repeat) return;   // ignorar auto-repeat al mantener pulsado
+      initAudio();
+      if (gameState === 'stopped') start();
+      else if (gameState === 'playing') handleHit();
+      else if (gameState === 'paused') resume();
+      return;
+    }
+
+    // --- Resto de atajos (los que ya tenías) ---
+    if (e.code === 'KeyP') {
+      e.preventDefault();
+      if (gameState === 'playing') pause();
+      else if (gameState === 'paused') resume();
+    }
+    if (e.code === 'KeyA') {
+      e.preventDefault();
+      autoplay = !autoplay;
+      updateButtons();
+    }
+    if (e.code === 'KeyB') {
+      e.preventDefault();
+      playbackEnabled = !playbackEnabled;
+      updateButtons();
+    }
+    if (e.code === 'KeyL') {
+      e.preventDefault();
+      showLegend = !showLegend;
+    }
+    if (e.code === 'KeyM') {
+      e.preventDefault();
+      gameMode = gameMode === 'song' ? 'ambient' : 'song';
+      modeSelect.value = gameMode;
+      if (gameState !== 'stopped') stop();
+      updateButtons();
+      updateFormDisplay();
+    }
+    if (e.code === 'KeyR') {
+      e.preventDefault();
+      if (recording) stopRecording(); else startRecording();
+    }
+  });
+
+  bpmInput.addEventListener('input', () => {
+    const oldBpm = bpm;
+    bpm = parseInt(bpmInput.value, 10);
+    bpmVal.textContent = bpm;
+    if (gameState === 'playing' && gameMode === 'song' && oldBpm !== bpm) {
+      const now = currentGameTime();
+      const newBeatMs = 60000 / bpm;
+      const newSemicorcheaMs = newBeatMs / 4;
+      nextMusicEventTime = Math.ceil(now / newSemicorcheaMs) * newSemicorcheaMs;
+    }
+  });
+
+  tolInput.addEventListener('input', () => {
+    tolerance = parseInt(tolInput.value, 10);
+    tolVal.textContent = tolerance + ' ms';
+  });
+
+  progSelect.addEventListener('change', () => {
+    progressionName = progSelect.value;
+    lastPadBar = -1;
+  });
+
+  // =========================================================
+  //   INIT
+  // =========================================================
+  resize();
+  bpmVal.textContent = bpm;
+  tolVal.textContent = tolerance + ' ms';
+  modeSelect.value = gameMode;
+  updateStats();
+  updateButtons();
+  updateRecButton();
+  updateFormDisplay();
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
